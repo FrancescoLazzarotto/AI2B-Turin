@@ -107,6 +107,18 @@ Le chiamate da un'altra origine sono comunque abilitate (CORS).
 | POST | `/api/match?top=10` | `Org` → `mission_fit` per intervento + `ranking` delle zone con le 4 componenti |
 | POST | `/api/plan?top=3` | `Org` → `piano` (dove/perché/quanto/intervento), `residui`, `testo`, `fonte_testo` |
 | POST | `/api/auto?top=3` | `{"testo": "..."}` → `profilo` estratto + tutto quello che restituisce `/api/plan` |
+| POST | `/api/ask` | `{"domanda": "...", "org": Org, "top": 3}` → `risposta` dell'LLM basata solo sui dati del piano e delle zone citate, `fonti` |
+| GET | `/data.js` | `window.ZONE` (GeoJSON con indicatori) e `window.PROFILI_ZONA` per il front-end |
+
+`/api/plan` restituisce anche `classifica` (tutte le zone candidate in ordine) e, per ogni zona del piano, la
+`solidita`: la quota di 200 simulazioni, con i pesi perturbati, in cui la zona resta nel piano. Con `testo=false`
+risponde in meno di un secondo, senza testo dell'LLM. `Org` accetta anche `escluse` (zone da non considerare) e
+`priorita` (moltiplicatore dello score per intervento).
+
+Il front-end in `web/` (Bussola Welfare) usa questi endpoint:
+- "Compila con l'AI" chiama `/api/org/parse`;
+- "Genera il piano" chiama `/api/plan`, prima senza testo e poi con il testo dell'LLM in background;
+- "Chiedi al piano" chiama `/api/ask`, con risposte locali a regole fisse se l'LLM non risponde.
 
 Esempio di `Org`:
 
