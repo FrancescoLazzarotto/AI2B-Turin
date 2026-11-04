@@ -1,0 +1,129 @@
+{
+ "indici": {
+  "isolamento": {
+   "varianza_spiegata": 0.705,
+   "fattori": {
+    "quota_over65": {
+     "peso": 0.272,
+     "direzione": 1
+    },
+    "quota_over80": {
+     "peso": 0.238,
+     "direzione": 1
+    },
+    "indice_vecchiaia": {
+     "peso": 0.238,
+     "direzione": 1
+    },
+    "vedovi_1000": {
+     "peso": 0.251,
+     "direzione": 1
+    },
+    "soli_1000": {
+     "peso": 0.0,
+     "direzione": -1
+    }
+   }
+  },
+  "carenza_servizi": {
+   "varianza_spiegata": 0.585,
+   "fattori": {
+    "dist_residenziale": {
+     "peso": 0.234,
+     "direzione": 1
+    },
+    "dist_sanita": {
+     "peso": 0.384,
+     "direzione": 1
+    },
+    "dist_farmacia": {
+     "peso": 0.363,
+     "direzione": 1
+    },
+    "carenza_strutture": {
+     "peso": 0.019,
+     "direzione": 1
+    }
+   }
+  },
+  "fragilita": {
+   "varianza_spiegata": 0.686,
+   "fattori": {
+    "quota_stranieri": {
+     "peso": 0.001,
+     "direzione": 1
+    },
+    "ass_tot_1000": {
+     "peso": 0.359,
+     "direzione": 1
+    },
+    "ass_lavoro_1000": {
+     "peso": 0.332,
+     "direzione": 1
+    },
+    "ass_casa_1000": {
+     "peso": 0.308,
+     "direzione": 1
+    }
+   }
+  }
+ },
+ "profili": [
+  {
+   "id": 0,
+   "zone": 26,
+   "centro": {
+    "isolamento": 0.37,
+    "carenza_servizi": 0.83,
+    "fragilita": 0.58
+   },
+   "etichetta": "carenza_servizi alto; isolamento basso"
+  },
+  {
+   "id": 1,
+   "zone": 22,
+   "centro": {
+    "isolamento": 0.75,
+    "carenza_servizi": 0.41,
+    "fragilita": 0.25
+   },
+   "etichetta": "isolamento alto; fragilita basso"
+  },
+  {
+   "id": 2,
+   "zone": 15,
+   "centro": {
+    "isolamento": 0.27,
+    "carenza_servizi": 0.15,
+    "fragilita": 0.78
+   },
+   "etichetta": "fragilita alto; isolamento basso, carenza_servizi basso"
+  },
+  {
+   "id": 3,
+   "zone": 16,
+   "centro": {
+    "isolamento": 0.83,
+    "carenza_servizi": 0.52,
+    "fragilita": 0.76
+   },
+   "etichetta": "isolamento alto + fragilita alto"
+  },
+  {
+   "id": 4,
+   "zone": 13,
+   "centro": {
+    "isolamento": 0.22,
+    "carenza_servizi": 0.42,
+    "fragilita": 0.16
+   },
+   "etichetta": "nella media; isolamento basso, fragilita basso"
+  }
+ ],
+ "copertura": {
+  "zone": 92,
+  "strutture_asl_localizzate": 219,
+  "strutture_asl_torino": 251,
+  "farmacie": 279
+ }
+}
