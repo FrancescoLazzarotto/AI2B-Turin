@@ -2,7 +2,7 @@
    Uso: copiare questo file nella stessa cartella di index.html, aggiungere prima di </body> la riga
    <script>if (/demo/.test(location.search)) { const d=document.createElement('script'); d.src='demo.js'; document.body.appendChild(d); }</script>
    e aprire index.html?demo=1 (oppure http://localhost:PORTA/?demo=1 se l'app è servita dal back end).
-   Porta a termine un compito completo: scelte della fondazione, piano, mappa, scheda della zona, due domande al chatbot.
+   Porta a termine un compito completo: profilo compilato dall'AI dal testo libero, piano, mappa, scheda della zona, due domande al chatbot.
    Usa solo l'interfaccia: funziona anche se calcolo e chatbot arrivano dal back end. */
 (function(){
   const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -35,35 +35,40 @@
 
   async function run(){
     location.hash = '#/'; await wait(1500);
-    say('1', 'Chi sei: una fondazione bancaria'); await tocca('#chi [data-v="fondazione"]'); await wait(2000);
-    say('2', 'Quanto investire: 150.000 €');
-    const b = $('#budget');
-    if (b){ b.scrollIntoView({behavior:'smooth', block:'center'}); await wait(500); b.classList.add('demo-hl'); b.value = ''; b.dispatchEvent(new Event('input', {bubbles:true})); await scrivi(b, '150000', 110); b.classList.remove('demo-hl'); }
-    await wait(1800);
-    say('3', 'Cosa conta: isolamento demografico e carenza di servizi');
-    await tocca('.need[data-k="iso"] .level [data-v="2"]'); await tocca('.need[data-k="ser"] .level [data-v="2"]'); await tocca('.need[data-k="lav"] .level [data-v="1"]'); await wait(1800);
-    say('4', 'Dove: escludiamo il centro, circoscrizione 1');
-    const c1 = $('#circ [data-c="1"]'); if (c1 && c1.getAttribute('aria-pressed') !== 'false') await tocca('#circ [data-c="1"]');
-    await wait(2000);
-    say('5', 'Genero il piano'); await tocca('#cta');
-    await aspetta(() => location.hash === '#/mappa', 20000); await wait(5000);
-    say('6', 'La mappa del rischio: in nero le zone scelte'); await wait(6500);
+    const testo = 'Siamo la Fondazione Torino Solidale, una fondazione bancaria. Vogliamo investire 150.000 euro contro la solitudine degli anziani e la carenza di servizi sanitari di prossimità, con 6 operatori, nelle circoscrizioni 2, 5 e 6.';
+    const o = $('#orgText');
+    if (o){
+      say('1', 'Descrivo l\'organizzazione con parole mie');
+      o.scrollIntoView({behavior:'smooth', block:'center'}); await wait(600);
+      o.classList.add('demo-hl'); o.value = ''; await scrivi(o, testo, 28); o.classList.remove('demo-hl'); await wait(800);
+      say('2', 'L\'AI legge il testo e compila il profilo'); await tocca('#orgParse');
+      await aspetta(() => !$('#orgParse').disabled, 60000); await wait(2500);
+    }
+    say('3', 'Chi sei: fondazione bancaria');
+    $('#chi').scrollIntoView({behavior:'smooth', block:'center'}); await wait(3000);
+    say('4', 'Budget 150.000 € e bisogni, impostati dall\'AI');
+    $('.bento').scrollIntoView({behavior:'smooth', block:'center'}); await wait(3500);
+    say('5', 'Dove: circoscrizioni 2, 5 e 6');
+    $('#circ').scrollIntoView({behavior:'smooth', block:'center'}); await wait(3000);
+    say('6', 'Genero il piano'); await tocca('#cta');
+    await aspetta(() => location.hash === '#/mappa', 20000); await wait(3500);
+    say('7', 'La mappa del rischio: in nero le zone scelte'); await wait(5500);
     // prima zona del piano: dallo stato dell'app se c'è, altrimenti dalla pagina Piano
     let primo = null;
     try { primo = S.plan.items[0].p; } catch(e) {}
     if (primo && typeof apriZona === 'function' && typeof F !== 'undefined'){
-      say('7', `Apro ${primo.nome}: dati e fonti della zona`);
-      apriZona(F.find(f => f.properties.id === primo.id)); await wait(7000);
+      say('8', `Apro ${primo.nome}: dati e fonti della zona`);
+      apriZona(F.find(f => f.properties.id === primo.id)); await wait(5500);
       if (typeof chiudiZona === 'function') chiudiZona(); await wait(800);
     }
-    say('8', 'Il piano: dove, con quale intervento, quanto'); location.hash = '#/piano'; await wait(4000);
+    say('9', 'Il piano: dove, con quale intervento, quanto'); location.hash = '#/piano'; await wait(4000);
     const nome = primo ? primo.nome : (($('.pc h3') || {}).textContent || '').trim();
-    window.scrollTo({top: 420, behavior:'smooth'}); await wait(5000); window.scrollTo({top: 0, behavior:'smooth'}); await wait(1500);
-    say('9', 'Come funziona: metodo e fonti dei dati'); await tocca('#infoBtn'); await wait(8000);
+    window.scrollTo({top: 420, behavior:'smooth'}); await wait(3500); window.scrollTo({top: 0, behavior:'smooth'}); await wait(1500);
+    say('10', 'Come funziona: metodo e fonti dei dati'); await tocca('#infoBtn'); await wait(8000);
     await tocca('#sheetClose'); await wait(600);
-    say('10', 'Interrogo il chatbot sul piano generato'); location.hash = '#/chiedi'; await wait(2000);
-    if (nome) await chiedi(`Perché ${nome}?`, 7000);
-    await chiedi('Quanto è solido il piano?', 6000);
+    say('11', 'Interrogo il chatbot sul piano generato'); location.hash = '#/chiedi'; await wait(2000);
+    if (nome) await chiedi(`Perché ${nome}?`, 5000);
+    await chiedi('Quanto è solido il piano?', 4500);
     say('', 'Fatto: il piano è pronto per il consiglio della fondazione');
   }
   if (document.readyState === 'complete') setTimeout(run, 600); else window.addEventListener('load', () => setTimeout(run, 600));
