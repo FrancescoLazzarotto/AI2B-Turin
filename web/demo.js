@@ -27,39 +27,41 @@
     const q = $('#q'), form = $('#askbar'); if (!q || !form) return;
     const prima = document.querySelectorAll('.qa').length;
     q.classList.add('demo-hl'); await scrivi(q, testo); await wait(400); form.requestSubmit(); q.classList.remove('demo-hl');
-    await aspetta(() => document.querySelectorAll('.qa').length > prima, 20000);   // attende anche una risposta lenta dal back end
+    await aspetta(() => document.querySelectorAll('.qa').length > prima, 20000);
+    await aspetta(() => { const a = [...document.querySelectorAll('.qa .a')].pop(); return a && !/sta cercando/.test(a.textContent); }, 60000);
+    const ultima = [...document.querySelectorAll('.qa')].pop(); if (ultima) ultima.scrollIntoView({behavior:'smooth', block:'center'});
     await wait(attesa);
   }
 
   async function run(){
-    location.hash = '#/'; await wait(900);
-    say('1', 'Chi sei: una fondazione bancaria'); await tocca('#chi [data-v="fondazione"]'); await wait(700);
+    location.hash = '#/'; await wait(1500);
+    say('1', 'Chi sei: una fondazione bancaria'); await tocca('#chi [data-v="fondazione"]'); await wait(2000);
     say('2', 'Quanto investire: 150.000 €');
     const b = $('#budget');
     if (b){ b.scrollIntoView({behavior:'smooth', block:'center'}); await wait(500); b.classList.add('demo-hl'); b.value = ''; b.dispatchEvent(new Event('input', {bubbles:true})); await scrivi(b, '150000', 110); b.classList.remove('demo-hl'); }
-    await wait(500);
+    await wait(1800);
     say('3', 'Cosa conta: isolamento demografico e carenza di servizi');
-    await tocca('.need[data-k="iso"] .level [data-v="2"]'); await tocca('.need[data-k="ser"] .level [data-v="2"]'); await tocca('.need[data-k="lav"] .level [data-v="1"]'); await wait(400);
+    await tocca('.need[data-k="iso"] .level [data-v="2"]'); await tocca('.need[data-k="ser"] .level [data-v="2"]'); await tocca('.need[data-k="lav"] .level [data-v="1"]'); await wait(1800);
     say('4', 'Dove: escludiamo il centro, circoscrizione 1');
     const c1 = $('#circ [data-c="1"]'); if (c1 && c1.getAttribute('aria-pressed') !== 'false') await tocca('#circ [data-c="1"]');
-    await wait(600);
+    await wait(2000);
     say('5', 'Genero il piano'); await tocca('#cta');
-    await aspetta(() => location.hash === '#/mappa', 20000); await wait(3800);
-    say('6', 'La mappa del rischio: in nero le zone scelte'); await wait(3200);
+    await aspetta(() => location.hash === '#/mappa', 20000); await wait(5000);
+    say('6', 'La mappa del rischio: in nero le zone scelte'); await wait(8500);
     // prima zona del piano: dallo stato dell'app se c'è, altrimenti dalla pagina Piano
     let primo = null;
     try { primo = S.plan.items[0].p; } catch(e) {}
     if (primo && typeof apriZona === 'function' && typeof F !== 'undefined'){
       say('7', `Apro ${primo.nome}: dati e fonti della zona`);
-      apriZona(F.find(f => f.properties.id === primo.id)); await wait(4200);
-      if (typeof chiudiZona === 'function') chiudiZona(); await wait(400);
+      apriZona(F.find(f => f.properties.id === primo.id)); await wait(8000);
+      if (typeof chiudiZona === 'function') chiudiZona(); await wait(800);
     }
-    say('8', 'Il piano: dove, con quale intervento, quanto'); location.hash = '#/piano'; await wait(2200);
+    say('8', 'Il piano: dove, con quale intervento, quanto'); location.hash = '#/piano'; await wait(4000);
     const nome = primo ? primo.nome : (($('.pc h3') || {}).textContent || '').trim();
-    window.scrollTo({top: 420, behavior:'smooth'}); await wait(2200); window.scrollTo({top: 0, behavior:'smooth'}); await wait(900);
-    say('9', 'Interrogo il chatbot sul piano generato'); location.hash = '#/chiedi'; await wait(1300);
-    if (nome) await chiedi(`Perché ${nome}?`, 3800);
-    await chiedi('Quanto è solido il piano?', 3600);
+    window.scrollTo({top: 420, behavior:'smooth'}); await wait(7000); window.scrollTo({top: 0, behavior:'smooth'}); await wait(1500);
+    say('9', 'Interrogo il chatbot sul piano generato'); location.hash = '#/chiedi'; await wait(2000);
+    if (nome) await chiedi(`Perché ${nome}?`, 7000);
+    await chiedi('Quanto è solido il piano?', 6000);
     say('', 'Fatto: il piano è pronto per il consiglio della fondazione');
   }
   if (document.readyState === 'complete') setTimeout(run, 600); else window.addEventListener('load', () => setTimeout(run, 600));
