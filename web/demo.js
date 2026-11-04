@@ -47,19 +47,21 @@
     await wait(2000);
     say('5', 'Genero il piano'); await tocca('#cta');
     await aspetta(() => location.hash === '#/mappa', 20000); await wait(5000);
-    say('6', 'La mappa del rischio: in nero le zone scelte'); await wait(8500);
+    say('6', 'La mappa del rischio: in nero le zone scelte'); await wait(6500);
     // prima zona del piano: dallo stato dell'app se c'è, altrimenti dalla pagina Piano
     let primo = null;
     try { primo = S.plan.items[0].p; } catch(e) {}
     if (primo && typeof apriZona === 'function' && typeof F !== 'undefined'){
       say('7', `Apro ${primo.nome}: dati e fonti della zona`);
-      apriZona(F.find(f => f.properties.id === primo.id)); await wait(8000);
+      apriZona(F.find(f => f.properties.id === primo.id)); await wait(7000);
       if (typeof chiudiZona === 'function') chiudiZona(); await wait(800);
     }
     say('8', 'Il piano: dove, con quale intervento, quanto'); location.hash = '#/piano'; await wait(4000);
     const nome = primo ? primo.nome : (($('.pc h3') || {}).textContent || '').trim();
-    window.scrollTo({top: 420, behavior:'smooth'}); await wait(7000); window.scrollTo({top: 0, behavior:'smooth'}); await wait(1500);
-    say('9', 'Interrogo il chatbot sul piano generato'); location.hash = '#/chiedi'; await wait(2000);
+    window.scrollTo({top: 420, behavior:'smooth'}); await wait(5000); window.scrollTo({top: 0, behavior:'smooth'}); await wait(1500);
+    say('9', 'Come funziona: metodo e fonti dei dati'); await tocca('#infoBtn'); await wait(8000);
+    await tocca('#sheetClose'); await wait(600);
+    say('10', 'Interrogo il chatbot sul piano generato'); location.hash = '#/chiedi'; await wait(2000);
     if (nome) await chiedi(`Perché ${nome}?`, 7000);
     await chiedi('Quanto è solido il piano?', 6000);
     say('', 'Fatto: il piano è pronto per il consiglio della fondazione');
