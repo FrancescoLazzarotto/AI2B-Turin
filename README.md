@@ -1,6 +1,6 @@
-# Bussola Welfare — Social Impact Planner for Turin
+# Welfare Compass — Social Impact Planner for Turin
 
-Bussola Welfare helps foundations, third-sector organisations and public institutions decide where in Turin
+Welfare Compass helps foundations, third-sector organisations and public institutions decide where in Turin
 their funds generate the greatest social impact. For each of the city's 92 statistical zones it measures
 demographic isolation, service gaps and socio-economic fragility from open data, matches those needs with the
 profile of a specific organisation, and returns a ranked, explainable plan: where to invest, why, how much,
@@ -159,7 +159,7 @@ src/build.py      territorial indicators, PCA, k-means
 src/api.py        profile, matching, planner, Q&A, API
 src/catalog.json  interventions, unit costs, indicator labels
 serve/            start scripts for models and API
-web/              Bussola Welfare web app and scripted demo (demo.js)
+web/              Welfare Compass web app and scripted demo (demo.js)
 ```
 
 ## Limitations

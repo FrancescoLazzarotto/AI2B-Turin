@@ -1,4 +1,4 @@
-/* Demo automatica di Bussola Welfare.
+/* Demo automatica di Welfare Compass.
    Uso: copiare questo file nella stessa cartella di index.html, aggiungere prima di </body> la riga
    <script>if (/demo/.test(location.search)) { const d=document.createElement('script'); d.src='demo.js'; document.body.appendChild(d); }</script>
    e aprire index.html?demo=1 (oppure http://localhost:PORTA/?demo=1 se l'app è servita dal back end).

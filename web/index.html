@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Bussola Welfare</title>
+<title>Welfare Compass</title>
 <link rel="icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -271,8 +271,8 @@
 <body>
 <div class="app">
   <header class="top">
-    <a class="logo" href="#/" aria-label="Bussola Welfare, inizio"><img src="logo.png" alt=""></a>
-    <div class="top-mid"><b id="topTitle">Bussola welfare</b><span id="topSub">Social Impact Planner per Torino</span></div>
+    <a class="logo" href="#/" aria-label="Welfare Compass, inizio"><img src="logo.png" alt=""></a>
+    <div class="top-mid"><b id="topTitle">Welfare Compass</b><span id="topSub">Social Impact Planner per Torino</span></div>
     <button class="round" id="infoBtn" aria-label="Come funziona">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5" stroke-linecap="round"/></svg>
     </button>
@@ -284,7 +284,7 @@
       <div class="hero" style="--i:0">
         <div>
           <h1>Dove servono i tuoi fondi</h1>
-          <p>Innovazione sociale per il welfare. Scegli chi sei, quanto investire e cosa ti sta a cuore: la Bussola indica i quartieri di Torino a maggior rischio di isolamento demografico o carenza di servizi, dove i fondi generano più ritorno sociale.</p>
+          <p>Innovazione sociale per il welfare. Scegli chi sei, quanto investire e cosa ti sta a cuore: Welfare Compass indica i quartieri di Torino a maggior rischio di isolamento demografico o carenza di servizi, dove i fondi generano più ritorno sociale.</p>
         </div>
         <div class="meta"><span class="tag">92 zone statistiche</span><span class="tag">Dati AperTO, Comune di Torino</span><span class="tag">Dati Regione Piemonte</span></div>
         <div class="shapes" aria-hidden="true"><i class="sph s4"></i><i class="sph s1"></i><i class="sph s2"></i><i class="sph s3"></i></div>
@@ -385,7 +385,7 @@
     <h3>L'AI</h3>
     <p>Un modello linguistico locale legge la descrizione dell'organizzazione e compila il profilo, scrive il piano e risponde alle domande usando solo i numeri calcolati: se una risposta contiene una cifra che non è nei dati viene scartata. Nessun dato esce dal server.</p>
     <h3>Intelligenza artificiale e AI Act</h3>
-    <p>Bussola Welfare è progettata in linea con il Regolamento (UE) 2024/1689 sull'intelligenza artificiale (AI Act). È un sistema a rischio limitato. Lavora su dati aggregati per zona statistica, non valuta singole persone e non decide l'accesso a prestazioni di assistenza, per questo non rientra tra i sistemi ad alto rischio dell'allegato III, punto 5. Valgono gli obblighi di trasparenza dell'articolo 50. Chi usa la sezione Chiedi viene informato che sta parlando con un sistema di IA, ogni risposta indica le fonti e la decisione finale resta a chi investe.</p>
+    <p>Welfare Compass è progettata in linea con il Regolamento (UE) 2024/1689 sull'intelligenza artificiale (AI Act). È un sistema a rischio limitato. Lavora su dati aggregati per zona statistica, non valuta singole persone e non decide l'accesso a prestazioni di assistenza, per questo non rientra tra i sistemi ad alto rischio dell'allegato III, punto 5. Valgono gli obblighi di trasparenza dell'articolo 50. Chi usa la sezione Chiedi viene informato che sta parlando con un sistema di IA, ogni risposta indica le fonti e la decisione finale resta a chi investe.</p>
     <h3>Fonti</h3>
     <p>Comune di Torino, AperTO: popolazione ed età per zona statistica 2013 e 2020, stranieri, stato civile e famiglie per circoscrizione 2025, interventi di assistenza economica, numeri civici, confini delle zone. Regione Piemonte: strutture ASL, farmacie. Mappa © OpenStreetMap, OpenFreeMap, OpenMapTiles. Zone con meno di 1000 residenti escluse dal calcolo. Le cifre orientano, non decidono.</p>
     <div style="margin-top:22px"><button class="btn dark" id="sheetClose">Ho capito</button></div>
@@ -461,7 +461,7 @@ const motivo = x => x.x.perche.slice(0,2).map(d => `${d.indicatore} ${d.valore} 
 
 /* ========== navigazione tra schermate ========== */
 const $ = id => document.getElementById(id);
-const ROUTES = { home:['Bussola welfare','Social Impact Planner per Torino'], mappa:['Mappa','Rischio per quartiere'], piano:['Il tuo piano',''], chiedi:['Chiedi al piano','Risposte dell\'AI dai dati del piano'] };
+const ROUTES = { home:['Welfare Compass','Social Impact Planner per Torino'], mappa:['Mappa','Rischio per quartiere'], piano:['Il tuo piano',''], chiedi:['Chiedi al piano','Risposte dell\'AI dai dati del piano'] };
 function route(){ const r = (location.hash.replace('#/','')||'home'); return ROUTES[r] ? r : 'home'; }
 function show(r){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
