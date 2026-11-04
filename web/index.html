@@ -29,9 +29,10 @@
 
   /* testata */
   .top{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;gap:12px;margin-bottom:18px}
-  .logo{width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
-  .logo img{width:48px;height:48px;object-fit:contain;transform:scale(1.15);animation:drop .9s cubic-bezier(.2,1.4,.4,1) .15s both}
-  @keyframes drop{from{transform:translateY(-14px) scale(1.15);opacity:0}}
+  .logo{width:48px;height:48px;display:grid;place-items:center}
+  .logo img{width:48px;height:48px;object-fit:contain;transform:scale(1);animation:drop .9s cubic-bezier(.2,1.4,.4,1) .15s both}
+  @keyframes drop{from{transform:translateY(-14px) scale(1);opacity:0}}
+  .aidisc-mini{font-size:12.5px;color:var(--muted);text-align:center;margin-top:8px}
   
   .top-mid{text-align:center}
   .top-mid b{display:block;font-weight:600;font-size:17px}
@@ -383,6 +384,8 @@
     <p>Per ogni zona e ogni intervento: Score = 0,35 NeedFit + 0,25 ServiceGap + 0,20 MissionFit + 0,20 Feasibility. NeedFit unisce intensità del bisogno e numero di persone, ServiceGap la carenza del servizio legato all'intervento, MissionFit la somiglianza semantica tra la tua missione e l'intervento (embedding), Feasibility quanto la scala della zona corrisponde a budget e operatori. La solidità dice in quante di 200 simulazioni, cambiando un po' i pesi, la zona resta nel piano.</p>
     <h3>L'AI</h3>
     <p>Un modello linguistico locale legge la descrizione dell'organizzazione e compila il profilo, scrive il piano e risponde alle domande usando solo i numeri calcolati: se una risposta contiene una cifra che non è nei dati viene scartata. Nessun dato esce dal server.</p>
+    <h3>Intelligenza artificiale e AI Act</h3>
+    <p>Bussola Welfare è progettata in linea con il Regolamento (UE) 2024/1689 sull'intelligenza artificiale (AI Act). È un sistema a rischio limitato. Lavora su dati aggregati per zona statistica, non valuta singole persone e non decide l'accesso a prestazioni di assistenza, per questo non rientra tra i sistemi ad alto rischio dell'allegato III, punto 5. Valgono gli obblighi di trasparenza dell'articolo 50. Chi usa la sezione Chiedi viene informato che sta parlando con un sistema di IA, ogni risposta indica le fonti e la decisione finale resta a chi investe.</p>
     <h3>Fonti</h3>
     <p>Comune di Torino, AperTO: popolazione ed età per zona statistica 2013 e 2020, stranieri, stato civile e famiglie per circoscrizione 2025, interventi di assistenza economica, numeri civici, confini delle zone. Regione Piemonte: strutture ASL, farmacie. Mappa © OpenStreetMap, OpenFreeMap, OpenMapTiles. Zone con meno di 1000 residenti escluse dal calcolo. Le cifre orientano, non decidono.</p>
     <div style="margin-top:22px"><button class="btn dark" id="sheetClose">Ho capito</button></div>
@@ -746,10 +749,14 @@ function rispondi(q){
   } else a = 'Posso rispondere su una zona (scrivine il nome), su un confronto tra due zone, sulla solidità del piano, sulla divisione del budget, sul metodo o sui dati.';
   return {a, src:[...src]};
 }
+function scrivi(el, text){
+  const w = text.split(/(\s+)/); let i = 0; el.textContent = '';
+  const id = setInterval(() => { el.textContent += w.slice(i, i+2).join(''); i += 2; if (i >= w.length || !el.isConnected) clearInterval(id); }, 35);
+}
 async function chiediAI(q, t, d){
   try { const r = await api('/api/ask', {domanda:q, org:S.plan.org, top:S.plan.N}); t.a = r.risposta; t.src = [...r.fonti, 'AI locale']; }
   catch(e){ const r = rispondi(q); t.a = r.a; t.src = r.src; }
-  if (d && d.isConnected){ d.querySelector('.a').textContent = t.a; const s = d.querySelector('.src'); s.innerHTML = ''; t.src.forEach(x => { const sp = document.createElement('span'); sp.textContent = x; s.appendChild(sp); }); }
+  if (d && d.isConnected){ scrivi(d.querySelector('.a'), t.a); const s = d.querySelector('.src'); s.innerHTML = ''; t.src.forEach(x => { const sp = document.createElement('span'); sp.textContent = x; s.appendChild(sp); }); }
 }
 const THREAD = [];
 function renderChiedi(){
@@ -761,7 +768,8 @@ function renderChiedi(){
   el.innerHTML = `<div class="rise"><div class="planhead" style="--i:0"><div><h1>Chiedi al piano</h1><p>Ogni risposta usa solo i dati delle zone e le scelte del piano, e mostra da dove viene.</p></div></div>
     <div class="sugg" style="--i:1">${sug.map(s=>`<button>${s}</button>`).join('')}</div></div>
     <div class="thread" id="thread"></div>
-    <form class="askbar" id="askbar"><input id="q" autocomplete="off" placeholder="Es. perché Lucento e non Pozzo Strada?" aria-label="Domanda"><button aria-label="Chiedi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></form>`;
+    <form class="askbar" id="askbar"><input id="q" autocomplete="off" placeholder="Es. perché Lucento e non Pozzo Strada?" aria-label="Domanda"><button aria-label="Chiedi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></form>
+    <p class="aidisc-mini">Risposte generate da un sistema di IA, possono contenere errori.</p>`;
   el.querySelectorAll('.sugg button').forEach(b=>b.onclick=()=>chiedi(b.textContent));
   $('askbar').onsubmit = e => { e.preventDefault(); chiedi($('q').value); $('q').value=''; };
   THREAD.forEach(t=>aggiungi(t,false));
