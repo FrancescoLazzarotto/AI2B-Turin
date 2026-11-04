@@ -71,8 +71,11 @@ Score = w1·NeedFit + w2·ServiceGap + w3·MissionFit + w4·Feasibility     (def
 - **ServiceGap**: percentile della carenza del servizio legato all'intervento.
 - **MissionFit**: somiglianza semantica (embedding e5) tra la missione dichiarata e la descrizione
   dell'intervento.
-- **Feasibility**: beneficiari che l'organizzazione riesce a coprire (vincolata da budget e operatori)
-  divisi per i beneficiari potenziali della zona.
+- **Feasibility**: adeguatezza di scala tra la capacità dell'organizzazione (beneficiari coperti con budget e
+  operatori) e i beneficiari potenziali della zona, `min(capacità, bisogno) / max(capacità, bisogno)`. Vale 1
+  quando le due dimensioni coincidono e scende sia se la zona è troppo grande sia se è troppo piccola.
+
+Le zone con meno di 1000 residenti (9, quasi tutte in collina) non entrano nella classifica perché i loro tassi sono instabili.
 
 Per ogni zona si tiene l'intervento con lo score più alto. I pesi si possono passare nella richiesta.
 

@@ -19,6 +19,7 @@ DRIVERS = json.loads((ROOT / "data/processed/drivers.json").read_text())
 CAT = json.loads((ROOT / "src/catalog.json").read_text())
 INT = {c["id"]: c for c in CAT["interventi"]}
 LABEL = CAT["etichette"]
+MIN_POP = 1000
 LLM = OpenAI(base_url="http://127.0.0.1:8001/v1", api_key="-", timeout=120)
 EMB = OpenAI(base_url="http://127.0.0.1:8002/v1", api_key="-", timeout=30)
 
@@ -86,10 +87,13 @@ def fmt(col, v):
 def ranking(org):
     w = org.pesi.model_dump()
     tot = sum(w.values())
+    if tot <= 0:
+        raise HTTPException(422, "almeno un peso deve essere maggiore di zero")
     w = {k: v / tot for k, v in w.items()}
     ids = [i for i in org.interventi if i in INT] or [c["id"] for c in CAT["interventi"] if set(c["destinatari"]) & set(org.destinatari)] or list(INT)
     mf = mission_fit(org.missione)
-    zz = Z[Z.circ.isin(org.circoscrizioni)] if org.circoscrizioni else Z
+    zz = Z[Z["pop"] >= MIN_POP]
+    zz = zz[zz.circ.isin(org.circoscrizioni)] if org.circoscrizioni else zz
     rows = []
     for i in ids:
         c = INT[i]
@@ -97,7 +101,7 @@ def ranking(org):
         gap = zz[f"p_{c['gap']}"]
         benef = (zz[c["target"]] * c["copertura"]).clip(lower=1).round()
         cap = min(org.budget / c["costo"], org.operatori * c["per_operatore"])
-        feas = (cap / benef).clip(upper=1)
+        feas = np.minimum(cap, benef) / np.maximum(cap, benef)
         score = w["need"] * need + w["gap"] * gap + w["mission"] * mf[i] + w["feasibility"] * feas
         rows.append(pd.DataFrame({"zona": zz.index, "nome": zz.nome, "circ": zz.circ, "intervento": i, "score": score,
                                   "need_fit": need, "service_gap": gap, "mission_fit": mf[i], "feasibility": feas,
@@ -155,6 +159,8 @@ def numbers(s, rounded=False):
 
 
 def narrative(org, plan):
+    if not plan:
+        return "Con il budget e gli operatori indicati non si raggiunge nemmeno un beneficiario nelle zone selezionate.", "template"
     facts = json.dumps({"organizzazione": org.nome, "missione": org.missione, "piano": plan}, ensure_ascii=False)
     prompt = ("Sei un consulente per enti del terzo settore. Scrivi in italiano il piano d'intervento per l'organizzazione, "
               "una sezione per zona con titolo in grassetto e quattro voci: Dove, Perché, Con quale intervento, Quanto. "
@@ -167,6 +173,21 @@ def narrative(org, plan):
         return template(org, plan), "template"
     extra = {n for n in numbers(text) - numbers(facts, rounded=True) if int(n) > 10}
     return (text, "llm") if not extra else (template(org, plan), "template")
+
+
+def mentioned_circ(text):
+    text = text.lower()
+    found = set()
+    for zona, nome in Z.nome.items():
+        for part in nome.lower().replace("(", " - ").replace(")", "").split(" - "):
+            part = part.strip()
+            words = part.split()
+            if not words:
+                continue
+            keys = [part] + ([" ".join(words[1:])] if words[0] in ("nuova", "borgata", "borgo") and len(words) > 1 else [])
+            if any(len(k) >= 5 and k in text for k in keys):
+                found.add(int(Z.circ[zona]))
+    return found
 
 
 @app.get("/api/zones")
@@ -199,22 +220,30 @@ def catalog():
 def parse(t: Testo):
     schema = Org.model_json_schema()
     schema["properties"]["categoria"] = {"enum": CAT["categorie"]}
-    schema["properties"]["destinatari"] = {"type": "array", "items": {"enum": CAT["destinatari"]}}
-    schema["properties"]["interventi"] = {"type": "array", "items": {"enum": list(INT)}}
-    schema["properties"]["circoscrizioni"] = {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 8}}
+    schema["properties"]["destinatari"] = {"type": "array", "items": {"enum": CAT["destinatari"]}, "maxItems": 3}
+    schema["properties"]["interventi"] = {"type": "array", "items": {"enum": list(INT)}, "maxItems": 3}
+    schema["properties"]["circoscrizioni"] = {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 8}, "maxItems": 8}
     schema["properties"].pop("pesi")
     schema.pop("$defs", None)
     schema["required"] = ["nome", "categoria", "missione", "destinatari", "interventi", "budget", "operatori", "circoscrizioni"]
     cat = "\n".join(f"- {c['id']}: {c['descrizione']}" for c in CAT["interventi"])
     prompt = ("Estrai il profilo dell'organizzazione dal testo. Interventi possibili:\n" + cat +
-              "\nCircoscrizioni di Torino 1-8: indica solo quelle citate esplicitamente, altrimenti lista vuota. "
+              "\nUna fondazione bancaria è 'fondazione'. Destinatari: scegli solo quelli citati o implicati dal testo. "
+              "Circoscrizioni di Torino 1-8: indica solo quelle citate esplicitamente, altrimenti lista vuota. "
               "Budget in euro annui. Se un dato manca usa budget 10000 e operatori 1.\n\nTESTO:\n" + t.testo)
     try:
         r = LLM.chat.completions.create(model="llm", messages=[{"role": "user", "content": prompt}], temperature=0, max_tokens=600,
                                         response_format={"type": "json_schema", "json_schema": {"name": "org", "schema": schema}})
     except Exception:
         raise HTTPException(503, "LLM non disponibile")
-    return Org.model_validate_json(r.choices[0].message.content)
+    try:
+        org = Org.model_validate_json(r.choices[0].message.content)
+    except ValueError:
+        raise HTTPException(502, "profilo non estratto: riformula il testo o compila il modulo")
+    org.destinatari = list(dict.fromkeys(org.destinatari))
+    org.interventi = list(dict.fromkeys(org.interventi))
+    org.circoscrizioni = sorted(set(org.circoscrizioni) | mentioned_circ(t.testo))
+    return org
 
 
 @app.post("/api/match")
