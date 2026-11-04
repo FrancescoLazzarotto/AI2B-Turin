@@ -1,0 +1,33 @@
+{
+ "categorie": ["associazione", "cooperativa sociale", "fondazione", "ente pubblico", "impresa sociale", "altro"],
+ "destinatari": ["anziani", "anziani non autosufficienti", "persone sole", "disoccupati", "famiglie fragili", "stranieri", "senza dimora"],
+ "etichette": {
+  "quota_over65": ["quota over 65", "%"],
+  "quota_over80": ["quota over 80", "%"],
+  "indice_vecchiaia": ["anziani ogni 100 under 15", "x100"],
+  "vedovi_1000": ["vedovi ogni 1000 abitanti (stima)", ""],
+  "soli_1000": ["persone sole ogni 1000 abitanti (stima)", ""],
+  "quota_stranieri": ["quota stranieri", "%"],
+  "trend_over65": ["variazione quota over 65 dal 2013 al 2020", "pt"],
+  "trend_over80": ["variazione quota over 80 dal 2013 al 2020", "pt"],
+  "dist_residenziale": ["distanza media da struttura residenziale/semiresidenziale ASL", "m"],
+  "dist_sanita": ["distanza media da presidio sanitario territoriale ASL", "m"],
+  "dist_farmacia": ["distanza media dalla farmacia", "m"],
+  "ass_tot_1000": ["interventi di assistenza economica ogni 1000 abitanti", ""],
+  "ass_lavoro_1000": ["interventi di reddito di inserimento lavorativo ogni 1000 abitanti", ""],
+  "ass_casa_1000": ["contributi per casa e utenze ogni 1000 abitanti", ""],
+  "isolamento": ["indice di isolamento demografico", "idx"],
+  "carenza_servizi": ["indice di carenza di servizi", "idx"],
+  "fragilita": ["indice di fragilità socioeconomica", "idx"]
+ },
+ "interventi": [
+  {"id": "assistenza_domiciliare", "nome": "Assistenza domiciliare", "descrizione": "Operatori a domicilio per anziani non autosufficienti o fragili: cura della persona, igiene, pasti, compagnia.", "destinatari": ["anziani non autosufficienti", "anziani"], "target": "over80", "need": ["quota_over80", "vedovi_1000", "isolamento", "trend_over80"], "gap": "dist_residenziale", "costo": 2400, "per_operatore": 12, "copertura": 0.05},
+  {"id": "centro_incontro", "nome": "Centro d'incontro e socializzazione", "descrizione": "Spazio di aggregazione per anziani e persone sole: attività culturali, motorie, laboratori, contrasto alla solitudine e invecchiamento attivo.", "destinatari": ["anziani", "persone sole"], "target": "over65", "need": ["isolamento", "vedovi_1000", "quota_over65", "trend_over65"], "gap": "carenza_servizi", "costo": 350, "per_operatore": 60, "copertura": 0.05},
+  {"id": "trasporto_sociale", "nome": "Trasporto sociale", "descrizione": "Accompagnamento e trasporto di anziani e persone fragili verso visite mediche, servizi sanitari e uffici.", "destinatari": ["anziani", "anziani non autosufficienti"], "target": "over80", "need": ["quota_over80", "dist_sanita"], "gap": "dist_sanita", "costo": 600, "per_operatore": 30, "copertura": 0.05},
+  {"id": "telesoccorso", "nome": "Telesoccorso e telecompagnia", "descrizione": "Dispositivi di allarme e chiamate periodiche per anziani che vivono soli, vedovi, a rischio di isolamento.", "destinatari": ["persone sole", "anziani"], "target": "vedovi_stima", "need": ["vedovi_1000", "quota_over80"], "gap": "dist_sanita", "costo": 250, "per_operatore": 150, "copertura": 0.1},
+  {"id": "prossimita_sanitaria", "nome": "Infermiere e sportello di comunità", "descrizione": "Presidio di prossimità con infermiere di comunità, prevenzione, monitoraggio di cronicità e orientamento ai servizi sociosanitari.", "destinatari": ["anziani", "anziani non autosufficienti"], "target": "over65", "need": ["quota_over65", "isolamento", "trend_over65"], "gap": "carenza_servizi", "costo": 500, "per_operatore": 80, "copertura": 0.05},
+  {"id": "inserimento_lavorativo", "nome": "Inclusione lavorativa", "descrizione": "Orientamento, formazione, tirocini e accompagnamento al lavoro per disoccupati e persone in assistenza economica.", "destinatari": ["disoccupati", "stranieri", "famiglie fragili"], "target": "assistiti", "need": ["ass_lavoro_1000", "quota_stranieri"], "gap": "fragilita", "costo": 3000, "per_operatore": 15, "copertura": 0.3},
+  {"id": "sostegno_abitativo", "nome": "Sostegno abitativo", "descrizione": "Aiuto per affitto, utenze, emergenza abitativa e accoglienza temporanea di famiglie fragili e senza dimora.", "destinatari": ["famiglie fragili", "senza dimora"], "target": "assistiti", "need": ["ass_casa_1000", "fragilita"], "gap": "fragilita", "costo": 1800, "per_operatore": 25, "copertura": 0.3},
+  {"id": "mediazione_culturale", "nome": "Mediazione culturale e lingua", "descrizione": "Corsi di italiano, mediazione interculturale e orientamento ai servizi per cittadini stranieri.", "destinatari": ["stranieri"], "target": "stranieri", "need": ["quota_stranieri", "fragilita"], "gap": "carenza_servizi", "costo": 300, "per_operatore": 100, "copertura": 0.05}
+ ]
+}
