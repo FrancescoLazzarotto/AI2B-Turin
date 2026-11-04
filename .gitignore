@@ -1,0 +1,25 @@
+# Ambienti virtuali
+venv/
+.venv/
+env/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dati grezzi: scaricati da AperTO / Regione Piemonte, non versionati
+data/raw/*
+!data/raw/.gitkeep
+
+# Editor e sistema
+.vscode/
+.idea/
+.DS_Store
