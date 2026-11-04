@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bussola Welfare</title>
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="maplibre-gl.css">
+<style>
+  :root{
+    --bg:#f3f3f5; --paper:#ffffff; --ink:#111111; --ink-2:#2c2c2e; --muted:#7a7a80; --line:#e3e3e8;
+    --lav:#a8dcb6; --lav-2:#d7ecc4; --orange:#f7cf6f; --blue:#a7d6e4; --pink:#f1b59b; /* foglia, germoglio, sole, acqua, terracotta */
+    --c1:#4fae6a; --c2:#f3d14a; --c3:#f39a3d; --c4:#e0483a; /* bisogno: verde basso, giallo medio, rosso alto */
+    --r-xl:30px; --r-l:24px; --r-m:18px;
+    --spring:cubic-bezier(.2,.9,.25,1.12); --ease:cubic-bezier(.2,.8,.2,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:"Urbanist",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased}
+  button,input{font:inherit;color:inherit;border:0;background:none}
+  button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  .num{font-variant-numeric:tabular-nums}
+
+  .app{max-width:1180px;margin:0 auto;padding:18px 24px 120px}
+
+  /* testata */
+  .top{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;gap:12px;margin-bottom:18px}
+  .logo{width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
+  .logo img{width:48px;height:48px;object-fit:contain;transform:scale(1.15);animation:drop .9s cubic-bezier(.2,1.4,.4,1) .15s both}
+  @keyframes drop{from{transform:translateY(-14px) scale(1.15);opacity:0}}
+  
+  .top-mid{text-align:center}
+  .top-mid b{display:block;font-weight:600;font-size:17px}
+  .top-mid span{font-size:14px;color:var(--muted)}
+  .round{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--paper);display:grid;place-items:center;transition:transform .3s var(--spring)}
+  .round:active{transform:scale(.92)}
+
+  /* viste */
+  .view{display:none}
+  .view.on{display:block}
+  .rise > *{animation:rise .7s var(--ease) both;animation-delay:calc(var(--i,0) * 70ms)}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}}
+  ::view-transition-old(root){animation:vt-out .28s cubic-bezier(.4,0,1,1) both}
+  ::view-transition-new(root){animation:vt-in .55s var(--ease) both}
+  @keyframes vt-out{to{opacity:0;transform:scale(.985)}}
+  @keyframes vt-in{from{opacity:0;transform:translateY(12px)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  h2.sec{font-size:24px;font-weight:600;margin:30px 0 14px;letter-spacing:-.01em}
+  .tag{display:inline-block;font-size:13px;font-weight:500;padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.55)}
+
+  /* hero */
+  .hero{background:var(--lav);border-radius:var(--r-l);padding:28px 30px;position:relative;overflow:hidden;min-height:220px;display:flex;flex-direction:column;justify-content:space-between}
+  .hero h1{font-size:clamp(34px,4.6vw,54px);font-weight:700;line-height:1.02;letter-spacing:-.025em;max-width:62%}
+  .hero p{font-size:15px;margin-top:10px;max-width:56%}
+  .hero .meta{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+  .shapes{position:absolute;right:28px;top:50%;width:230px;height:200px;transform:translateY(-50%)}
+  .sph{position:absolute;border-radius:50%}
+  .s1{width:120px;height:120px;right:0;top:6px;background:radial-gradient(circle at 35% 30%,#fffbe8 0,#f7d36f 38%,#d9a21c 100%);animation:float 6s ease-in-out infinite}
+  .s2{width:92px;height:92px;right:96px;top:70px;background:radial-gradient(circle at 35% 30%,#e9e6ef 0,#a9a3b8 50%,#5d5768 100%);animation:float 7s ease-in-out infinite reverse}
+  .s3{width:70px;height:70px;right:30px;top:122px;border:16px solid #2b2b30;background:transparent;animation:float 5.5s ease-in-out infinite}
+  .s4{width:46px;height:46px;right:170px;top:20px;border:11px solid #2f8a57;background:transparent;animation:float 6.5s ease-in-out infinite reverse}
+  @keyframes float{50%{transform:translateY(-8px)}}
+
+  /* pillole tipo calendario */
+  .pills{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px}
+  .pill{border:1px solid #cfcfd6;border-radius:999px;padding:14px 8px 12px;text-align:center;background:transparent;transition:background .35s var(--ease),color .35s var(--ease),transform .35s var(--spring),border-color .35s}
+  .pill:active{transform:scale(.95)}
+  .pill small{display:block;font-size:13px;color:var(--muted);transition:color .35s}
+  .pill b{display:block;font-size:17px;font-weight:500;margin-top:2px}
+  .pill[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .pill[aria-pressed="true"] small{color:#bdbdc4}
+  .pill .dot{display:block;width:6px;height:6px;border-radius:50%;background:var(--ink);margin:0 auto 6px;transition:opacity .3s,transform .3s var(--spring)}
+  .circ .pill{padding:10px 0}
+  .circ .pill[aria-pressed="true"]{background:var(--lav);color:var(--ink);border-color:var(--lav)}
+  .circ .pill[aria-pressed="true"] small{color:#2f5a3d}
+  .circ .pill[aria-pressed="true"] .dot{background:#1d6b45}
+  .circ .pill[aria-pressed="false"]{background:#e4e4e9;color:#a3a3a9;border-color:transparent}
+  .circ .pill[aria-pressed="false"] small{color:#b4b4ba}
+  .circ .pill[aria-pressed="false"] .dot{opacity:0;transform:scale(0)}
+  .sec-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .sec-row .sec{margin-bottom:6px}
+  .sec-note{font-size:14px;color:var(--muted)}
+  .sec-note button{font-size:14px;text-decoration:underline;text-underline-offset:3px;color:var(--ink);margin-left:10px}
+  .circ-help{font-size:14px;color:var(--muted);margin-bottom:12px}
+
+  /* bento */
+  .bento{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+  .card{border-radius:var(--r-l);padding:22px;position:relative;overflow:hidden}
+  .budget{grid-column:span 5;background:var(--orange);display:flex;flex-direction:column;justify-content:space-between;min-height:250px}
+  .budget h3,.need h3{font-size:24px;font-weight:600;letter-spacing:-.01em;margin-top:12px}
+  .amount{display:flex;align-items:center;gap:10px;margin-top:14px}
+  .amount input{width:100%;font-size:44px;font-weight:600;letter-spacing:-.03em;outline:0}
+  .step-btn{width:44px;height:44px;flex:none;border-radius:50%;background:rgba(255,255,255,.6);font-size:22px;display:grid;place-items:center;transition:transform .3s var(--spring),background .2s}
+  .step-btn:active{transform:scale(.88)}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .quick button{font-size:14px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.45);transition:background .25s}
+  .quick button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .needs{grid-column:span 7;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .need{display:flex;flex-direction:column;justify-content:space-between;min-height:250px;transition:transform .4s var(--spring)}
+  .need p{font-size:14px;margin-top:6px;color:var(--ink-2)}
+  .need.n1{background:var(--blue)} .need.n2{background:var(--pink)} .need.n3{background:var(--lav-2)}
+  .level{display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.5);border-radius:999px;padding:4px;position:relative;margin-top:16px}
+  .level i{position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px)/3);border-radius:999px;background:var(--ink);transition:transform .45s var(--spring)}
+  .level button{position:relative;z-index:1;font-size:13px;font-weight:500;padding:8px 0;border-radius:999px;transition:color .3s}
+  .level button[aria-pressed="true"]{color:#fff}
+  .need.zero{opacity:.55}
+
+  .cta{margin-top:26px;width:100%;height:68px;border-radius:999px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 28px;font-size:18px;font-weight:600;position:relative;overflow:hidden;transition:transform .35s var(--spring)}
+  .cta:active{transform:scale(.985)}
+  .cta .go{width:50px;height:50px;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center;transition:transform .5s var(--spring)}
+  .cta:hover .go{transform:translateX(4px)}
+  .cta .bar{position:absolute;left:0;top:0;bottom:0;width:0;background:#2a2a2e;transition:width 1.4s var(--ease)}
+  .cta span,.cta .go{position:relative;z-index:1}
+  .cta.loading .bar{width:100%}
+  .cta:disabled{opacity:.4;cursor:default}
+  .hint{font-size:14px;color:var(--muted);margin-top:10px;text-align:center;min-height:20px}
+
+  /* mappa */
+  .mapwrap{position:relative;height:calc(100vh - 230px);min-height:520px;border-radius:var(--r-xl);overflow:hidden;background:#f8f4ec}
+  #map{position:absolute;inset:0}
+  .maplibregl-map{font-family:inherit}
+  .maplibregl-ctrl-group{border-radius:14px!important;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.08)!important}
+  .float{position:absolute;z-index:500;background:rgba(255,255,255,.94);border-radius:var(--r-m);box-shadow:0 10px 30px rgba(0,0,0,.08)}
+  .summary{left:16px;top:16px;padding:16px 18px;width:290px}
+  .summary b{font-size:22px;font-weight:600;display:block;letter-spacing:-.01em}
+  .summary span{font-size:14px;color:var(--muted)}
+  .ramp{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--muted)}
+  .ramp i{flex:1;height:8px;border-radius:999px;background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3),var(--c4))}
+  .keyline{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--muted)}
+  .keyline i{width:16px;height:12px;border:2.5px solid var(--ink);border-radius:3px}
+  .maplegend[hidden]{display:none}
+  .summary .dirty{margin-top:12px;font-size:14px;color:var(--ink-2);display:flex;align-items:center;gap:10px;justify-content:space-between}
+  .maplegend{background:var(--paper);border-radius:var(--r-l);padding:20px 22px;margin-top:14px;display:grid;grid-template-columns:280px 1fr;gap:28px;align-items:start}
+  .lg-ramp i{display:block;height:12px;border-radius:999px;background:linear-gradient(90deg,var(--c1),var(--c2) 45%,var(--c3) 70%,var(--c4))}
+  .lg-ends{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:8px}
+  .lg-items{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+  .lg-items div{display:flex;gap:10px;align-items:flex-start}
+  .lg-items p{font-size:13px;color:var(--ink-2);line-height:1.35}
+  .lg-items b{display:block;font-weight:600;color:var(--ink);font-size:14px;margin-bottom:2px}
+  .sw{width:18px;height:18px;border-radius:6px;flex:none;margin-top:1px}
+  .sw.line{border:3px solid var(--ink)}
+  .sw.hatch{background:repeating-linear-gradient(45deg,#e4e4e8 0 3px,#cfcfd4 3px 5px)}
+  @media (max-width:900px){.maplegend{grid-template-columns:1fr}.lg-items{grid-template-columns:1fr 1fr}}
+  .zinfo{left:16px;bottom:16px;width:360px;padding:18px;overflow:hidden;transform:translateY(20px);opacity:0;pointer-events:none;transition:transform .45s var(--spring),opacity .3s}
+  .zinfo.on{transform:none;opacity:1;pointer-events:auto}
+  .zphoto{position:relative;margin:-18px -18px 14px;height:190px;border-radius:var(--r-m) var(--r-m) 0 0;overflow:hidden;background:#ece8df}
+  .zphoto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%;opacity:0;transform:scale(1.04);transition:opacity .6s var(--ease),transform 1.2s var(--ease)}
+  .zphoto img.on{opacity:1;transform:none}
+  .zphoto .shimmer{position:absolute;inset:0;background:linear-gradient(100deg,#ece8df 30%,#f6f3ec 50%,#ece8df 70%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+  .zphoto.ready .shimmer{display:none}
+  @keyframes sh{to{background-position:-200% 0}}
+  .zphoto figcaption{position:absolute;left:10px;bottom:8px;right:10px;font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .zinfo .close{z-index:2;background:rgba(255,255,255,.9)}
+  .zsub{font-size:13px;color:var(--ink-2);margin-top:2px}
+  .zinfo .zsub{margin:-6px 0 10px}
+  .srct{font-size:11px;font-weight:500;color:var(--ink-2);background:var(--bg);border-radius:999px;padding:1px 7px;margin-left:4px;vertical-align:1px}
+  .pc .what small{display:block;font-size:12px;color:var(--ink-2);margin-bottom:2px}
+  .impact{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:13px;color:var(--ink-2)}
+  .impact b{font-weight:700;color:var(--ink)}
+  .zinfo h3{font-size:21px;font-weight:600;margin:8px 0 10px;letter-spacing:-.01em}
+  .zinfo dl{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:14px;color:var(--ink-2)}
+  .zinfo dd{text-align:right;font-weight:500}
+  .zinfo .act{margin-top:14px;display:flex;gap:8px}
+  .btn{border-radius:999px;padding:10px 16px;font-size:14px;font-weight:500;background:var(--bg);transition:transform .3s var(--spring)}
+  .btn:active{transform:scale(.95)}
+  .btn.dark{background:var(--ink);color:#fff}
+  .close{position:absolute;right:12px;top:12px;width:30px;height:30px;border-radius:50%;background:var(--bg);display:grid;place-items:center}
+
+  /* piano */
+  .planhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:6px 0 18px;flex-wrap:wrap}
+  .planhead h1{font-size:clamp(34px,4.4vw,52px);font-weight:700;letter-spacing:-.025em;line-height:1}
+  .planhead p{color:var(--muted);font-size:15px;margin-top:6px}
+  .stats{display:flex;gap:10px}
+  .stat{background:var(--paper);border-radius:var(--r-m);padding:12px 16px;min-width:120px}
+  .stat b{display:block;font-size:22px;font-weight:600}
+  .stat span{font-size:13px;color:var(--muted)}
+  .plan{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:minmax(210px,auto);gap:14px}
+  .pc{border-radius:var(--r-l);padding:22px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:transform .45s var(--spring)}
+  .pc:hover{transform:translateY(-3px)}
+  .pc:active{transform:scale(.98)}
+  .pc.big{grid-row:span 2}
+  .pc:nth-child(4n+1){background:var(--orange)} .pc:nth-child(4n+2){background:var(--blue)} .pc:nth-child(4n+3){background:var(--pink)} .pc:nth-child(4n+4){background:var(--lav-2)}
+  .pc h3{font-size:26px;font-weight:600;letter-spacing:-.015em;margin-top:12px;line-height:1.1}
+  .pc .what{font-size:15px;margin-top:8px}
+  .pc .why{font-size:14px;margin-top:6px;color:var(--ink-2)}
+  .pc .foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:18px}
+  .pc .eur{font-size:30px;font-weight:700;letter-spacing:-.02em}
+  .pc .rk{font-size:14px;color:var(--ink-2)}
+  .pc.big h3{font-size:34px}
+  .pc.big .eur{font-size:44px}
+  .empty{background:var(--paper);border-radius:var(--r-l);padding:40px;text-align:center}
+  .empty h2{font-size:26px;font-weight:600;margin-bottom:8px}
+  .empty p{color:var(--muted);margin-bottom:18px}
+
+  /* chiedi */
+  .sugg{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 18px}
+  .sugg button{border:1px solid #cfcfd6;border-radius:999px;padding:9px 15px;font-size:15px;transition:background .25s,color .25s,transform .3s var(--spring)}
+  .sugg button:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .thread{display:flex;flex-direction:column;gap:12px}
+  .qa{background:var(--paper);border-radius:var(--r-l);padding:20px 22px;animation:rise .6s var(--ease) both}
+  .qa .q{font-size:20px;font-weight:600;letter-spacing:-.01em}
+  .qa .a{font-size:16px;margin-top:8px;color:var(--ink-2);max-width:820px}
+  .qa .src{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .qa .src span{font-size:13px;background:var(--bg);border-radius:999px;padding:4px 10px;color:var(--ink-2)}
+  .askbar{position:sticky;bottom:104px;margin-top:16px;display:flex;gap:8px;background:var(--paper);border-radius:999px;padding:8px 8px 8px 22px;box-shadow:0 8px 28px rgba(0,0,0,.06)}
+  .askbar input{flex:1;outline:0;font-size:16px;min-width:0}
+  .askbar button{width:48px;height:48px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center}
+  .ai{background:var(--paper);margin-top:14px}
+  .ai textarea{width:100%;min-height:92px;margin-top:12px;font:inherit;font-size:16px;border:0;outline:0;resize:vertical;background:var(--bg);border-radius:14px;padding:14px}
+  .ai .row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .ai .row span{font-size:14px;color:var(--muted)}
+  .aitext{background:var(--paper);margin-top:18px;white-space:pre-wrap;font-size:16px;line-height:1.5}
+
+  /* barra di navigazione */
+  .nav{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);border-radius:999px;padding:7px;display:grid;grid-template-columns:repeat(4,64px);gap:6px;z-index:1000;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+  .nav a{height:56px;border-radius:999px;display:grid;place-items:center;color:#fff;position:relative;z-index:1;transition:color .35s}
+  .nav a.on{color:var(--ink)}
+  .nav .ind{position:absolute;top:7px;left:7px;width:64px;height:56px;border-radius:999px;background:#fff;transition:transform .5s var(--spring)}
+  .nav a span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  /* metodo */
+  .sheet{position:fixed;inset:0;z-index:2000;display:grid;place-items:end center;background:rgba(0,0,0,0);pointer-events:none;transition:background .4s}
+  .sheet.on{background:rgba(0,0,0,.25);pointer-events:auto}
+  .sheet .in{background:var(--paper);width:min(760px,100%);border-radius:var(--r-xl) var(--r-xl) 0 0;padding:28px 28px 40px;transform:translateY(100%);transition:transform .55s var(--spring);max-height:86vh;overflow:auto}
+  .sheet.on .in{transform:none}
+  .sheet:not(.on){visibility:hidden;transition:background .4s,visibility 0s .55s}
+  .sheet h2{font-size:28px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px}
+  .sheet h3{font-size:17px;font-weight:600;margin:16px 0 4px}
+  .sheet p{color:var(--ink-2);font-size:15px}
+  .grab{width:40px;height:5px;border-radius:999px;background:var(--line);margin:-12px auto 18px}
+
+  @media (max-width:900px){
+    .app{padding:14px 16px 120px}
+    .budget,.needs{grid-column:span 12}
+    .needs{grid-template-columns:1fr}
+    .need{min-height:0}
+    .hero h1,.hero p{max-width:100%}
+    .shapes{display:none}
+    .plan{grid-template-columns:1fr 1fr}
+    .pc.big{grid-row:auto;grid-column:span 2}
+    .summary{width:auto;right:16px}
+    .zinfo{width:auto;right:16px}
+  }
+  @media (max-width:600px){
+    .plan{grid-template-columns:1fr}
+    .pc.big{grid-column:auto}
+    .pills{gap:6px}
+    .pill{padding:10px 4px 9px}
+    .pill small{font-size:12px}
+    .pill b{font-size:15px}
+    .circ{grid-auto-flow:row;grid-template-columns:repeat(4,1fr)}
+    .amount input{font-size:36px}
+    .hero{padding:22px}
+    .summary{padding:12px 14px}
+    .summary b{font-size:18px}
+    .lg-items{grid-template-columns:1fr}
+    .stats{width:100%}
+    .stat{flex:1;min-width:0}
+    .nav{grid-template-columns:repeat(4,58px);bottom:16px}
+    .nav a{height:52px}
+    .nav .ind{width:58px;height:52px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <a class="logo" href="#/" aria-label="Bussola Welfare, inizio"><img src="logo.png" alt=""></a>
+    <div class="top-mid"><b id="topTitle">Bussola welfare</b><span id="topSub">Social Impact Planner per Torino</span></div>
+    <button class="round" id="infoBtn" aria-label="Come funziona">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5" stroke-linecap="round"/></svg>
+    </button>
+  </header>
+
+  <!-- 1. imposta -->
+  <section class="view" id="v-home">
+    <div class="rise">
+      <div class="hero" style="--i:0">
+        <div>
+          <h1>Dove servono i tuoi fondi</h1>
+          <p>Innovazione sociale per il welfare. Scegli chi sei, quanto investire e cosa ti sta a cuore: la Bussola indica i quartieri di Torino a maggior rischio di isolamento demografico o carenza di servizi, dove i fondi generano più ritorno sociale.</p>
+        </div>
+        <div class="meta"><span class="tag">92 zone statistiche</span><span class="tag">Dati AperTO, Comune di Torino</span><span class="tag">Dati Regione Piemonte</span></div>
+        <div class="shapes" aria-hidden="true"><i class="sph s4"></i><i class="sph s1"></i><i class="sph s2"></i><i class="sph s3"></i></div>
+      </div>
+
+      <div class="card ai" style="--i:1">
+        <span class="tag">AI</span><h3>Descrivi la tua organizzazione</h3>
+        <textarea id="orgText" placeholder="Es. Siamo una cooperativa sociale di Torino Nord: assistenza domiciliare e trasporto per anziani non autosufficienti a Barriera di Milano. 12 operatori, 80.000 euro l'anno."></textarea>
+        <div class="row"><button class="btn dark" id="orgParse">Compila con l'AI</button><span id="orgMsg">L'AI legge il testo e imposta profilo, bisogni, budget e zone.</span></div>
+      </div>
+
+      <h2 class="sec" style="--i:1">Chi sei</h2>
+      <div class="pills chi" id="chi" style="--i:2" role="group" aria-label="Chi sei">
+        <button class="pill" data-v="fondazione" aria-pressed="true"><small>Fondazione</small><b>bancaria</b></button>
+        <button class="pill" data-v="terzo" aria-pressed="false"><small>Ente del</small><b>terzo settore</b></button>
+        <button class="pill" data-v="istituzione" aria-pressed="false"><small>Istituzione</small><b>pubblica</b></button>
+      </div>
+
+      <h2 class="sec" style="--i:3">Budget e priorità</h2>
+      <div class="bento" style="--i:4">
+        <div class="card budget">
+          <div>
+            <span class="tag">Budget</span>
+            <h3>Quanto vuoi investire</h3>
+            <div class="amount">
+              <button class="step-btn" id="minus" aria-label="Meno 10.000 euro">−</button>
+              <input id="budget" class="num" inputmode="numeric" value="200.000" aria-label="Budget in euro">
+              <button class="step-btn" id="plus" aria-label="Più 10.000 euro">+</button>
+            </div>
+          </div>
+          <div class="quick" id="quick">
+            <button data-v="50000">50.000 €</button><button data-v="100000">100.000 €</button><button data-v="200000">200.000 €</button><button data-v="500000">500.000 €</button>
+          </div>
+        </div>
+        <div class="needs" id="needs">
+          <div class="card need n1" data-k="iso"><div><span class="tag lvl">Molto</span><h3>Isolamento demografico</h3><p>Anziani, over 80, vedovi, invecchiamento in corso</p></div>
+            <div class="level"><i></i><button data-v="0">Niente</button><button data-v="1">Un po'</button><button data-v="2">Molto</button></div></div>
+          <div class="card need n2" data-k="ser"><div><span class="tag lvl">Un po'</span><h3>Carenza di servizi</h3><p>Presidi sanitari e farmacie di prossimità</p></div>
+            <div class="level"><i></i><button data-v="0">Niente</button><button data-v="1">Un po'</button><button data-v="2">Molto</button></div></div>
+          <div class="card need n3" data-k="lav"><div><span class="tag lvl">Un po'</span><h3>Inclusione lavorativa</h3><p>Assistenza economica, stranieri, fragilità</p></div>
+            <div class="level"><i></i><button data-v="0">Niente</button><button data-v="1">Un po'</button><button data-v="2">Molto</button></div></div>
+        </div>
+      </div>
+
+      <div class="sec-row" style="--i:5"><h2 class="sec">Dove, per circoscrizione</h2><span class="sec-note"><span id="circCount">8 di 8 incluse</span><button id="circAll" hidden>Includi tutte</button></span></div>
+      <p class="circ-help" style="--i:5">In verde quelle incluse. Tocca una circoscrizione per escluderla, diventa grigia.</p>
+      <div class="pills circ" id="circ" style="--i:6" role="group" aria-label="Circoscrizioni incluse"></div>
+
+      <div style="--i:7">
+        <button class="cta" id="cta"><i class="bar"></i><span id="ctaText">Genera il piano</span><span class="go"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+        <div class="hint" id="hint"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. mappa -->
+  <section class="view" id="v-mappa">
+    <div class="mapwrap">
+      <div id="map" aria-label="Mappa di Torino con il bisogno per zona"></div>
+      <div class="float summary" id="summary"></div>
+      <div class="float zinfo" id="zinfo" role="dialog" aria-live="polite"></div>
+    </div>
+    <div class="maplegend" id="maplegend" aria-label="Legenda della mappa" hidden>
+      <div class="lg-ramp"><i></i><div class="lg-ends"><span>Bisogno basso</span><span>medio</span><span>alto</span></div></div>
+      <div class="lg-items">
+        <div><span class="sw" style="background:var(--c1)"></span><p><b>Verde</b>La zona sta meglio delle altre sui bisogni che hai scelto.</p></div>
+        <div><span class="sw" style="background:var(--c2)"></span><p><b>Giallo</b>Situazione nella media di Torino.</p></div>
+        <div><span class="sw" style="background:var(--c4)"></span><p><b>Rosso</b>Più anziani e vedovi, servizi più lontani, più fragilità economica, a seconda delle tue priorità.</p></div>
+        <div><span class="sw line"></span><p><b>Bordo nero</b>Zona scelta nel piano.</p></div>
+        <div><span class="sw hatch"></span><p><b>Grigio</b>Zona esclusa da te.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. piano -->
+  <section class="view" id="v-piano"><div id="pianoBody"></div></section>
+
+  <!-- 4. chiedi -->
+  <section class="view" id="v-chiedi"><div id="chiediBody"></div></section>
+</div>
+
+<nav class="nav" aria-label="Sezioni">
+  <i class="ind" id="ind"></i>
+  <a href="#/" data-r="home" aria-label="Imposta"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg><span>Imposta</span></a>
+  <a href="#/mappa" data-r="mappa" aria-label="Mappa"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span>Mappa</span></a>
+  <a href="#/piano" data-r="piano" aria-label="Piano"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg><span>Piano</span></a>
+  <a href="#/chiedi" data-r="chiedi" aria-label="Chiedi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 5h14v10H10l-5 4z"/></svg><span>Chiedi</span></a>
+</nav>
+
+<div class="sheet" id="sheet" role="dialog" aria-label="Come funziona">
+  <div class="in">
+    <div class="grab"></div>
+    <h2>Come funziona</h2>
+    <h3>Tre indici, pesati dai dati</h3>
+    <p>Isolamento demografico: quota di over 65 e over 80, indice di vecchiaia, vedovi. Carenza di servizi: distanza media dei numeri civici dalla struttura residenziale ASL, dal presidio sanitario territoriale e dalla farmacia. Fragilità: interventi di assistenza economica del Comune e quota di stranieri. I pesi dentro ogni indice non li abbiamo scelti noi: escono da un'analisi delle componenti principali sulle 92 zone. Un k-means raggruppa le zone in 5 profili.</p>
+    <h3>Il matching</h3>
+    <p>Per ogni zona e ogni intervento: Score = 0,35 NeedFit + 0,25 ServiceGap + 0,20 MissionFit + 0,20 Feasibility. NeedFit unisce intensità del bisogno e numero di persone, ServiceGap la carenza del servizio legato all'intervento, MissionFit la somiglianza semantica tra la tua missione e l'intervento (embedding), Feasibility quanto la scala della zona corrisponde a budget e operatori. La solidità dice in quante di 200 simulazioni, cambiando un po' i pesi, la zona resta nel piano.</p>
+    <h3>L'AI</h3>
+    <p>Un modello linguistico locale legge la descrizione dell'organizzazione e compila il profilo, scrive il piano e risponde alle domande usando solo i numeri calcolati: se una risposta contiene una cifra che non è nei dati viene scartata. Nessun dato esce dal server.</p>
+    <h3>Fonti</h3>
+    <p>Comune di Torino, AperTO: popolazione ed età per zona statistica 2013 e 2020, stranieri, stato civile e famiglie per circoscrizione 2025, interventi di assistenza economica, numeri civici, confini delle zone. Regione Piemonte: strutture ASL, farmacie. Mappa © OpenStreetMap, OpenFreeMap, OpenMapTiles. Zone con meno di 1000 residenti escluse dal calcolo. Le cifre orientano, non decidono.</p>
+    <div style="margin-top:22px"><button class="btn dark" id="sheetClose">Ho capito</button></div>
+  </div>
+</div>
+
+<script src="d3.min.js"></script>
+<script src="maplibre-gl.js"></script>
+<script src="data.js"></script>
+<script>
+/* ========== dati e calcolo ========== */
+const F = window.ZONE.features;
+const valid = f => f.properties.pop >= 1000;
+const V = F.filter(valid);
+const fmt = v => d3.format(',.0f')(v).replace(/,/g,'.');
+const dec = v => (v==null || !isFinite(v)) ? 'n.d.' : d3.format('.1f')(v).replace('.',',');
+const pc = v => dec(100*v) + '%';
+const eur = v => fmt(v) + ' €';
+V.forEach(f => { const p=f.properties; p.ix = { iso:p.p_isolamento, ser:p.p_carenza_servizi, lav:p.p_fragilita }; });
+function gmean(pairs){ let n=0,d=0; for (const [v,w] of pairs){ if (w<=0) continue; n+=w*Math.log(Math.max(v,.03)); d+=w; } return d ? Math.exp(n/d) : 0; }
+
+const PROFILI = {
+  fondazione:  {nome:'Fondazione bancaria', cat:'fondazione', ticket:30000, W:{iso:2,ser:1,lav:1}},
+  terzo:       {nome:'Ente del terzo settore', cat:'associazione', ticket:15000, W:{iso:2,ser:1,lav:2}},
+  istituzione: {nome:'Istituzione pubblica', cat:'ente pubblico', ticket:40000, W:{iso:1,ser:2,lav:1}},
+};
+const FAMIGLIE = { iso:['centro_incontro','assistenza_domiciliare','telesoccorso'], ser:['prossimita_sanitaria','trasporto_sociale'], lav:['inserimento_lavorativo','mediazione_culturale','sostegno_abitativo'] };
+const NOMI = {iso:'isolamento demografico', ser:'carenza di servizi', lav:'inclusione lavorativa'};
+const LIVELLI = ['Niente','Un po\'','Molto'];
+const S = { chi:'fondazione', budget:200000, W:{...PROFILI.fondazione.W}, circ:new Set([1,2,3,4,5,6,7,8]), out:new Set(), plan:null, dirty:false, nomeOrg:'', missione:'', operatori:null, interventi:[] };
+
+const minimo = () => PROFILI[S.chi].ticket / 2;
+const totale = (ix,W) => gmean([[ix.iso,W.iso],[ix.ser,W.ser],[ix.lav,W.lav]]);
+const incluso = p => S.circ.has(p.circ) && !S.out.has(p.id);
+const candidabile = f => valid(f) && incluso(f.properties);
+const api = (url, body) => fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}).then(r => r.ok ? r.json() : Promise.reject(r));
+
+function orgBody(){
+  const interventi = [], priorita = {};
+  for (const k in FAMIGLIE) if (S.W[k] > 0){
+    const mine = FAMIGLIE[k].filter(i => S.interventi.includes(i));
+    (mine.length ? mine : FAMIGLIE[k]).forEach(i => { interventi.push(i); priorita[i] = S.W[k]/2; });
+  }
+  return { nome:S.nomeOrg || PROFILI[S.chi].nome, categoria:PROFILI[S.chi].cat, missione:S.missione, interventi, priorita,
+    budget:S.budget, operatori:S.operatori || Math.max(1, Math.round(S.budget/35000)),
+    circoscrizioni: S.circ.size===8 ? [] : [...S.circ], escluse:[...S.out].map(Number) };
+}
+async function calcola(){
+  const cand = V.filter(candidabile), N = Math.max(1, Math.min(6, Math.floor(S.budget/PROFILI[S.chi].ticket)));
+  const base = {cand, N, W:{...S.W}, circ:new Set(S.circ), out:new Set(S.out), budget:S.budget, chi:S.chi, org:orgBody(), testo:null};
+  if (S.W.iso+S.W.ser+S.W.lav === 0 || !cand.length || S.budget < minimo()) return {...base, items:[], rank:[], pos:new Map()};
+  const r = await api(`/api/plan?top=${N}&testo=false`, base.org);
+  const byId = new Map(V.map(f => [f.properties.id, f]));
+  const rank = r.classifica.map(c => byId.get(String(c.zona))).filter(Boolean);
+  const items = r.piano.map((x,i) => ({p:byId.get(String(x.zona)).properties, euro:x.budget_eur, sol:x.solidita, pos:i+1, x}));
+  return {...base, items, rank, pos:new Map(rank.map((f,i) => [f.properties.id, i+1])), residui:r.residui};
+}
+function caricaTesto(P){
+  api(`/api/plan?top=${P.N}&testo=true`, P.org).then(r => { P.testo = r.testo; P.fonte = r.fonte_testo; })
+    .catch(() => { P.testo = ''; }).finally(() => { if (S.plan===P && route()==='piano') mostraTesto(); });
+}
+function mostraTesto(){
+  const el = $('aiText'); if (!el || !S.plan) return;
+  el.innerHTML = '';
+  if (S.plan.testo == null){ el.textContent = 'L\'AI sta scrivendo il piano dai dati…'; return; }
+  if (!S.plan.testo){ el.textContent = 'Testo dell\'AI non disponibile ora.'; return; }
+  S.plan.testo.split(/(\*\*[^*]+\*\*)/).forEach(t => { const n = t.startsWith('**') ? document.createElement('b') : document.createTextNode(t.replace(/\*\*/g,'')); if (t.startsWith('**')) n.textContent = t.slice(2,-2); el.appendChild(n); });
+  const tag = document.createElement('div'); tag.className = 'tag'; tag.style.marginTop = '12px';
+  tag.textContent = S.plan.fonte === 'llm' ? 'Scritto dall\'AI, numeri verificati sui dati' : 'Testo generato dai dati'; el.appendChild(tag);
+}
+const solTxt = s => s>=.8 ? 'Solida' : s>=.5 ? 'Abbastanza solida' : 'Poco solida';
+const motivo = x => x.x.perche.slice(0,2).map(d => `${d.indicatore} ${d.valore} (mediana Torino ${d.mediana_torino})`).join('; ');
+
+/* ========== navigazione tra schermate ========== */
+const $ = id => document.getElementById(id);
+const ROUTES = { home:['Bussola welfare','Social Impact Planner per Torino'], mappa:['Mappa','Rischio per quartiere'], piano:['Il tuo piano',''], chiedi:['Chiedi al piano','Risposte dell\'AI dai dati del piano'] };
+function route(){ const r = (location.hash.replace('#/','')||'home'); return ROUTES[r] ? r : 'home'; }
+function show(r){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  $('v-'+r).classList.add('on');
+  $('topTitle').textContent = ROUTES[r][0];
+  $('topSub').textContent = r==='piano' && S.plan ? `${PROFILI[S.chi].nome}, ${eur(S.budget)}` : ROUTES[r][1];
+  const links = [...document.querySelectorAll('.nav a')], i = links.findIndex(a=>a.dataset.r===r);
+  links.forEach(a=>a.classList.toggle('on', a.dataset.r===r));
+  const step = links[1].getBoundingClientRect().left - links[0].getBoundingClientRect().left; $('ind').style.transform = `translateX(${i*step}px)`;
+  if (r==='mappa') entraMappa();
+  if (r==='piano') renderPiano();
+  if (r==='chiedi') renderChiedi();
+  if (r==='home') { const el=document.querySelector('#v-home .rise'); el.classList.remove('rise'); void el.offsetWidth; el.classList.add('rise'); }
+  scrollTo({top:0});
+}
+function nav(){ const r=route(); if (document.startViewTransition) document.startViewTransition(()=>show(r)); else show(r); }
+addEventListener('hashchange', nav);
+
+/* ========== schermata imposta ========== */
+function press(group, v){ group.querySelectorAll('[data-v]').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.v==String(v)))); }
+$('chi').onclick = e => { const b=e.target.closest('.pill'); if(!b) return; S.chi=b.dataset.v; S.W={...PROFILI[S.chi].W}; press($('chi'),S.chi); syncNeeds(); changed(); };
+function syncNeeds(){
+  document.querySelectorAll('.need').forEach(c => { const v=S.W[c.dataset.k];
+    press(c.querySelector('.level'), v); c.querySelector('.level i').style.transform = `translateX(${v*100}%)`;
+    c.querySelector('.lvl').textContent = LIVELLI[v]; c.classList.toggle('zero', v===0); });
+}
+document.querySelectorAll('.need .level').forEach(l => l.onclick = e => { const b=e.target.closest('button'); if(!b) return; S.W[l.closest('.need').dataset.k]=+b.dataset.v; syncNeeds(); changed(); });
+const parseEur = s => parseInt(String(s).replace(/[^\d]/g,''))||0;
+function setBudget(v, tween){
+  v = Math.max(0, Math.min(5000000, v)); const from = S.budget; S.budget = v;
+  press($('quick'), v);
+  if (tween) d3.select($('budget')).transition().duration(450).ease(d3.easeCubicOut).tween('t',()=>{ const i=d3.interpolate(from,v); return t=>$('budget').value=fmt(Math.round(i(t)/1000)*1000); });
+  else $('budget').value = v ? fmt(v) : '';
+  changed();
+}
+$('budget').oninput = e => setBudget(parseEur(e.target.value));
+$('minus').onclick = () => setBudget(S.budget-10000, true);
+$('plus').onclick = () => setBudget(S.budget+10000, true);
+$('quick').onclick = e => { const b=e.target.closest('button'); if(b) setBudget(+b.dataset.v, true); };
+$('circ').innerHTML = [1,2,3,4,5,6,7,8].map(c=>`<button class="pill" data-c="${c}" aria-pressed="true" aria-label="Circoscrizione ${c}"><span class="dot"></span><small>Circ.</small><b>${c}</b></button>`).join('');
+function syncCirc(){ document.querySelectorAll('#circ .pill').forEach(b=>b.setAttribute('aria-pressed', String(S.circ.has(+b.dataset.c))));
+  $('circCount').textContent = `${S.circ.size} di 8 incluse`; $('circAll').hidden = S.circ.size===8; }
+$('circ').onclick = e => { const b=e.target.closest('.pill'); if(!b) return; const c=+b.dataset.c; S.circ.has(c)?S.circ.delete(c):S.circ.add(c); syncCirc(); changed(); };
+$('circAll').onclick = () => { S.circ = new Set([1,2,3,4,5,6,7,8]); syncCirc(); changed(); };
+
+function changed(segna=true){
+  if (S.plan && segna) S.dirty = true;
+  const noW = S.W.iso+S.W.ser+S.W.lav===0, n = V.filter(candidabile).length;
+  const poco = S.budget > 0 && S.budget < minimo();
+  const msg = noW ? 'Scegli almeno un bisogno.' : !S.budget ? 'Inserisci un budget.' : poco ? `Con ${eur(S.budget)} non si finanzia un intervento: servono almeno ${eur(minimo())} per una zona.` : !n ? 'Includi almeno una circoscrizione.' :
+    `${n} zone candidate. ` + (S.plan && S.dirty ? 'Hai cambiato le scelte, rigenera il piano.' : '');
+  $('hint').textContent = msg;
+  $('cta').disabled = noW || !S.budget || poco || !n;
+  $('ctaText').textContent = S.plan ? 'Rigenera il piano' : 'Genera il piano';
+  if (mapReady) summary();
+}
+$('cta').onclick = async () => {
+  const b = $('cta'); if (b.classList.contains('loading')) return;
+  b.classList.add('loading');
+  const steps = ['Leggo le zone di Torino','Confronto i bisogni','Divido il budget','Verifico la solidità'];
+  steps.forEach((s,i)=>setTimeout(()=>$('ctaText').textContent=s, i*340));
+  const wait = new Promise(r => setTimeout(r, 1400));
+  try { const P = await calcola(); await wait; S.plan = P; S.dirty=false; S.animate=true; caricaTesto(P); }
+  catch(e){ await wait; b.classList.remove('loading'); changed(false); $('hint').textContent = 'Il server non risponde, riprova.'; return; }
+  b.classList.remove('loading'); changed(false); location.hash = '#/mappa';
+};
+$('orgParse').onclick = async () => {
+  const t = $('orgText').value.trim(), b = $('orgParse'); if (!t || b.disabled) return;
+  b.disabled = true; $('orgMsg').textContent = 'L\'AI sta leggendo…';
+  try {
+    const o = await api('/api/org/parse', {testo:t});
+    S.chi = o.categoria==='fondazione' ? 'fondazione' : o.categoria==='ente pubblico' ? 'istituzione' : 'terzo'; press($('chi'), S.chi);
+    S.nomeOrg = o.nome; S.missione = o.missione; S.operatori = o.operatori; S.interventi = o.interventi;
+    if (o.interventi.length) for (const k in FAMIGLIE) S.W[k] = FAMIGLIE[k].some(i => o.interventi.includes(i)) ? 2 : 0;
+    if (o.circoscrizioni.length) S.circ = new Set(o.circoscrizioni);
+    syncNeeds(); syncCirc(); setBudget(o.budget, true);
+    $('orgMsg').textContent = `${o.nome}: ${o.operatori} operatori, ${o.interventi.length ? o.interventi.length+' interventi riconosciuti' : 'interventi da scegliere'}${o.circoscrizioni.length ? ', circoscrizioni '+o.circoscrizioni.join(', ') : ''}. Controlla e genera il piano.`;
+  } catch(e){ $('orgMsg').textContent = 'Non sono riuscito a leggere il testo: riformulalo o compila a mano.'; }
+  b.disabled = false;
+};
+
+/* ========== mappa vera (MapLibre, stile Apple Maps) ========== */
+let map, mapReady = false, selected = null, hoverId = null;
+const color = d3.scaleLinear().domain([0,.45,.7,1]).range(['#4fae6a','#f3d14a','#f39a3d','#e0483a']).clamp(true);
+const inPlan = id => S.plan && S.plan.items.find(x=>x.p.id===id);
+const APPLE = { land:'#f8f4ec', resid:'#f4efe5', park:'#cfe8b4', wood:'#c4e1a6', water:'#a7d5f3', river:'#8fcaef',
+  bld:'#ece6da', bldLine:'#e0d9cc', road:'#ffffff', casing:'#ded9cf', major:'#ffffff', majorCasing:'#d2cdc3', motor:'#cbcbd0', motorCasing:'#b9b9bf', rail:'#cdcdd2', label:'#5f5f63' };
+function restyle(){
+  const set = (id, prop, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); } catch(e){} };
+  const hide = id => { try { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none'); } catch(e){} };
+  ['natural_earth','building-3d','boundary_3','boundary_2','boundary_disputed','road_one_way_arrow','road_one_way_arrow_opposite','highway-shield-non-us','highway-shield-us-interstate','road_shield_us'].forEach(hide);
+  set('background','background-color',APPLE.land);
+  set('landuse_residential','fill-color',APPLE.resid);
+  ['park','landcover_grass','landuse_pitch','landuse_cemetery'].forEach(id=>{ set(id,'fill-color',APPLE.park); set(id,'fill-opacity',1); });
+  set('landcover_wood','fill-color',APPLE.wood); set('landcover_wood','fill-opacity',1);
+  set('park_outline','line-opacity',0);
+  set('landuse_hospital','fill-color','#f9dede'); set('landuse_school','fill-color','#f5ecd6');
+  set('water','fill-color',APPLE.water);
+  ['waterway_river','waterway_other','waterway_tunnel'].forEach(id=>set(id,'line-color',APPLE.river));
+  set('building','fill-color',APPLE.bld); set('building','fill-outline-color',APPLE.bldLine);
+  map.getStyle().layers.forEach(l => {
+    const id = l.id;
+    if (l.type==='line' && /road|bridge|tunnel/.test(id)){
+      const casing = /casing/.test(id);
+      if (/rail/.test(id)) set(id,'line-color',APPLE.rail);
+      else if (/motorway/.test(id)) set(id,'line-color', casing ? APPLE.motorCasing : APPLE.motor);
+      else if (/trunk_primary/.test(id)) set(id,'line-color', casing ? APPLE.majorCasing : APPLE.major);
+      else if (/path_pedestrian/.test(id)) set(id,'line-color','#ffffff');
+      else set(id,'line-color', casing ? APPLE.casing : APPLE.road);
+    }
+    if (l.type==='symbol'){ set(id,'text-color', /water/.test(id) ? '#3d8fc4' : APPLE.label); set(id,'text-halo-color','#ffffff'); set(id,'text-halo-width',1.4); }
+  });
+}
+function propsZona(f, shown){
+  const p=f.properties, P=S.plan;
+  if (!P) return { id:p.id, fc:'#000', fo:0, lo:0, plan:0 };   // prima della generazione: Torino senza colori
+  const pl=inPlan(p.id), ok=valid(f) && P.circ.has(p.circ) && !P.out.has(p.id);
+  return { id:p.id, fc: ok ? color(totale(p.ix,P.W)) : '#cfcfd4', fo: !shown ? 0 : ok ? (pl ? .62 : .35) : .18, lo: shown ? .9 : 0, plan: pl ? 1 : 0 };
+}
+function geo(shownSet){
+  return { type:'FeatureCollection', features: F.map(f => ({ type:'Feature', geometry:f.geometry, properties: propsZona(f, !shownSet || shownSet.has(f.properties.id)) })) };
+}
+function initMap(){
+  map = new maplibregl.Map({ container:'map', style:'https://tiles.openfreemap.org/styles/liberty', center:[7.675,45.07], zoom:11.4,
+    attributionControl:{compact:true, customAttribution:'Dati zone: Comune di Torino, Regione Piemonte'} });
+  map.addControl(new maplibregl.NavigationControl({showCompass:false}), innerWidth>900 ? 'top-right' : 'bottom-right');
+  map.on('load', () => {
+    restyle();
+    const firstSymbol = map.getStyle().layers.find(l=>l.type==='symbol' && /label|name|poi/.test(l.id)); // zone sopra edifici e strade, sotto le scritte
+    map.addSource('zone', { type:'geojson', data: geo(new Set()), promoteId:'id' });
+    map.addLayer({ id:'zone-fill', type:'fill', source:'zone', paint:{ 'fill-color':['get','fc'], 'fill-opacity':['get','fo'] } }, firstSymbol && firstSymbol.id);
+    map.addLayer({ id:'zone-line', type:'line', source:'zone', paint:{ 'line-color':'#ffffff', 'line-width':1, 'line-opacity':['get','lo'] } }, firstSymbol && firstSymbol.id);
+    map.addLayer({ id:'zone-hover', type:'line', source:'zone', filter:['==',['get','id'],''], paint:{ 'line-color':'#111', 'line-width':1.6 } });
+    map.addLayer({ id:'zone-plan', type:'line', source:'zone', filter:['==',['get','plan'],1], paint:{ 'line-color':'#111', 'line-width':['interpolate',['linear'],['zoom'],11,2,15,4] } });
+    map.on('click','zone-fill', e => { if (!S.plan) return; const id=e.features[0].properties.id; apriZona(F.find(f=>f.properties.id===id)); });
+    map.on('mousemove','zone-fill', e => { if (!S.plan) return; map.getCanvas().style.cursor='pointer'; const id=e.features[0].properties.id; if (id!==hoverId){ hoverId=id; map.setFilter('zone-hover',['==',['get','id'],id]); } });
+    map.on('mouseleave','zone-fill', () => { map.getCanvas().style.cursor=''; hoverId=null; map.setFilter('zone-hover',['==',['get','id'],'']); });
+    mapReady = true;
+    new ResizeObserver(() => map.resize()).observe($('map'));
+    const att = document.querySelector('.maplibregl-ctrl-attrib'); if (att) att.classList.remove('maplibregl-compact-show');
+    dopoCarico();
+  });
+}
+let revealTimer = null;
+function colora(animated){
+  if (!mapReady) return;
+  clearInterval(revealTimer);
+  const src = map.getSource('zone');
+  if (!animated){ src.setData(geo()); summary(); return; }
+  // le zone compaiono a gruppi, prima le più bisognose
+  const order = (S.plan ? S.plan.rank.map(f=>f.properties.id) : []);
+  const rest = F.map(f=>f.properties.id).filter(id=>!order.includes(id));
+  const seq = [...order, ...rest], shown = new Set(); let i = 0;
+  revealTimer = setInterval(() => { for (let k=0;k<6 && i<seq.length;k++) shown.add(seq[i++]); src.setData(geo(shown)); if (i>=seq.length) clearInterval(revealTimer); }, 45);
+  summary();
+}
+function summary(){
+  const it = S.plan ? S.plan.items : [];
+  $('summary').innerHTML = S.plan ? `<b>${it.length} zone nel piano</b><span>${eur(S.plan.budget)} · ${PROFILI[S.plan.chi].nome}</span>
+      <div class="ramp">Bisogno <i></i></div><div class="keyline"><i></i>Zona nel piano</div>
+      ${S.dirty ? `<p class="dirty">Hai cambiato le scelte. <button class="btn dark" onclick="rigenera()">Rigenera</button></p>` : ''}`
+    : `<b>Torino, 92 zone statistiche</b><span>La mappa del rischio si colora quando generi il piano con le tue scelte.</span><a class="btn dark" href="#/" style="display:inline-block;margin-top:12px;text-decoration:none">Imposta le scelte</a>`;
+  $('maplegend').hidden = !S.plan;
+}
+const pad = () => innerWidth > 900 ? {top:40,bottom:40,left:340,right:60} : {top:140,bottom:60,left:30,right:30};
+const bboxOf = feats => {   // riquadro dalle coordinate (d3.geoBounds leggerebbe i poligoni come complemento del globo)
+  let w=180,s=90,e=-180,n=-90;
+  const walk = c => { if (typeof c[0]==='number'){ w=Math.min(w,c[0]); e=Math.max(e,c[0]); s=Math.min(s,c[1]); n=Math.max(n,c[1]); } else c.forEach(walk); };
+  feats.forEach(f => walk(f.geometry.coordinates)); return [[w,s],[e,n]]; };
+let inquadrata = false;
+function inquadra(){   // tutta Torino nel riquadro, a ogni dimensione
+  const r = $('map').getBoundingClientRect();
+  if (r.width < 200 || r.height < 200) return requestAnimationFrame(inquadra);
+  map.resize();
+  const big = innerWidth > 900;
+  map.fitBounds(bboxOf(F), {padding: big ? {top:30,bottom:30,left:330,right:30} : {top:Math.min(150, r.height*.25),bottom:20,left:10,right:10}, duration:0});
+  inquadrata = true;
+}
+function dopoCarico(){
+  map.resize();
+  if (!inquadrata) inquadra();
+  if (S.animate && S.plan && S.plan.items.length){
+    S.animate = false;
+    colora(true);   // la mappa resta ferma: cambiano solo i colori
+  } else colora(false);
+}
+function entraMappa(){ if (!map) requestAnimationFrame(initMap); else requestAnimationFrame(()=>{ map.resize(); if (mapReady) dopoCarico(); }); }
+function apriZona(f){
+  const p=f.properties, z=$('zinfo'); selected=f;
+  if (!valid(f)){ z.innerHTML = `<button class="close" aria-label="Chiudi" onclick="chiudiZona()">✕</button><span class="tag" style="background:var(--bg)">Pochi residenti</span><h3>${p.nome}</h3><p style="color:var(--muted);font-size:14px">Meno di 1000 residenti, non entra nel calcolo.</p>`; z.classList.add('on'); return; }
+  const x = inPlan(p.id), ok = incluso(p);
+  z.innerHTML = `<figure class="zphoto" id="zphoto"><div class="shimmer"></div><img alt="" id="zimg"><figcaption id="zcap"></figcaption></figure>
+    <button class="close" aria-label="Chiudi" onclick="chiudiZona()">✕</button>
+    <span class="tag" style="background:${x?'var(--orange)':'var(--bg)'}">${x ? `Nel piano, ${eur(x.euro)}` : ok ? 'Fuori dal piano' : 'Esclusa'}</span>
+    <h3>${p.nome}</h3><div class="zsub">Circoscrizione ${p.circ}</div>
+    <dl><dt>Anziani <small class="srct">AperTO</small></dt><dd class="num">${fmt(p.over65)} · ${pc(p.quota_over65)}</dd>
+      <dt>Indice di vecchiaia <small class="srct">AperTO</small></dt><dd class="num">${fmt(100*p.indice_vecchiaia)}</dd>
+      <dt>Vedovi ogni 1000 ab., stima <small class="srct">AperTO</small></dt><dd class="num">${dec(p.vedovi_1000)}</dd>
+      <dt>Presidio sanitario ASL <small class="srct">Regione</small></dt><dd class="num">${fmt(p.dist_sanita)} m</dd>
+      <dt>Farmacia <small class="srct">Regione</small></dt><dd class="num">${fmt(p.dist_farmacia)} m</dd>
+      <dt>Stranieri <small class="srct">AperTO</small></dt><dd class="num">${pc(p.quota_stranieri)}</dd>
+      <dt>Profilo <small class="srct">k-means</small></dt><dd>${window.PROFILI_ZONA[p.profilo]}</dd></dl>
+    <div class="act"><button class="btn" onclick="toggleZona()">${ok?'Escludi zona':'Includi zona'}</button>${S.plan?`<button class="btn dark" onclick="chiediZona()">Chiedi perché</button>`:''}</div>`;
+  z.classList.add('on');
+  caricaFoto(f);
+}
+/* foto della scheda: una foto di Torino, uguale per tutte le zone */
+const FOTO_TORINO = { src:'torino.jpg', cap:'Torino dal Monte dei Cappuccini · Peter Glyn, CC BY-SA 4.0, Wikimedia Commons' };
+function caricaFoto(){
+  const el=$('zimg'); if (!el) return;
+  el.onload = () => { el.classList.add('on'); $('zphoto').classList.add('ready'); };
+  el.onerror = () => $('zphoto') && $('zphoto').remove();
+  el.src = FOTO_TORINO.src; $('zcap').textContent = FOTO_TORINO.cap;
+  if (el.complete && el.naturalWidth) el.onload();
+}
+function chiudiZona(){ $('zinfo').classList.remove('on'); }
+async function rigenera(){ try { const P = await calcola(); S.plan = P; S.dirty = false; S.animate = true; caricaTesto(P); changed(false); dopoCarico(); } catch(e){} }
+function toggleZona(){ const id=selected.properties.id; S.out.has(id)?S.out.delete(id):S.out.add(id); changed(); apriZona(selected); }
+function chiediZona(){ const n=selected.properties.nome; location.hash='#/chiedi'; setTimeout(()=>chiedi(`Perché ${n}?`), 350); }
+
+/* ========== piano ========== */
+function renderPiano(){
+  const el = $('pianoBody');
+  if (!S.plan){ el.innerHTML = vuoto('Nessun piano ancora','Imposta chi sei, budget e priorità, poi genera il piano.'); return; }
+  const it = S.plan.items, solMed = it.length ? d3.mean(it,x=>x.sol) : 0;
+  el.innerHTML = `<div class="rise">
+    <div class="planhead" style="--i:0"><div><h1>${it.length} ${it.length===1?'quartiere':'quartieri'} da finanziare</h1>
+      <p>${['iso','ser','lav'].filter(k=>S.plan.W[k]>0).map(k=>NOMI[k]+(S.plan.W[k]===2?' (molto)':'')).join(', ')}${S.dirty?' · le scelte sono cambiate, rigenera il piano':''}</p></div>
+      <div class="stats"><div class="stat"><b class="num">${eur(S.plan.budget)}</b><span>budget</span></div><div class="stat"><b class="num">${fmt(d3.sum(it,x=>x.x.beneficiari))}</b><span>persone raggiunte, stima di impatto sociale</span></div><div class="stat"><b class="num">${Math.round(solMed*100)}%</b><span>solidità media</span></div></div></div>
+    <div class="plan">${it.map((x,i)=>`
+      <article class="pc ${i===0?'big':''}" style="--i:${i+1}" data-id="${x.p.id}" tabindex="0">
+        <div><span class="tag">${solTxt(x.sol)}, ${Math.round(x.sol*100)}%</span><h3>${x.p.nome}</h3>
+          <div class="zsub">Circoscrizione ${x.p.circ}</div>
+          <div class="what"><small>Intervento</small>${x.x.intervento}</div><div class="why">${motivo(x)}</div>
+          <div class="impact"><span><b class="num">${fmt(x.x.beneficiari)}</b> beneficiari su ${fmt(x.x.beneficiari_potenziali)} potenziali, ${x.x.operatori} ${x.x.operatori===1?'operatore':'operatori'}</span><span><b class="num">${fmt(x.x.costo_unitario_eur)} €</b> per persona</span></div></div>
+        <div class="foot"><span class="eur num" data-v="${x.euro}">0 €</span><span class="rk">${x.pos} di ${it.length}</span></div>
+      </article>`).join('')}</div><div class="card aitext" id="aiText"></div></div>`;
+  mostraTesto();
+  el.querySelectorAll('.eur').forEach((e,i)=>{ const v=+e.dataset.v;
+    d3.select(e).transition().delay(250+i*70).duration(900).ease(d3.easeCubicOut).tween('t',()=>{ const k=d3.interpolate(0,v); return t=>e.textContent=eur(Math.round(k(t)/100)*100); }); });
+  el.querySelectorAll('.pc').forEach(c => c.onclick = () => { const f=F.find(z=>z.properties.id===c.dataset.id); location.hash='#/mappa'; setTimeout(()=>apriZona(f), 500); });
+}
+function vuoto(t, s){ return `<div class="empty rise"><h2 style="--i:0">${t}</h2><p style="--i:1">${s}</p><a class="btn dark" style="--i:2;display:inline-block;text-decoration:none" href="#/">Vai alle scelte</a></div>`; }
+
+/* ========== chiedi: risposte recuperate dal piano generato ========== */
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function zoneCitate(q){
+  const n = norm(q), found = [];
+  for (const f of V){ const nome = norm(f.properties.nome);
+    const parti = nome.split(/\s*-\s*|\s*\(|\)/).map(x=>x.trim()).filter(x=>x.length>3);
+    const at = [nome,...parti].map(x=>n.indexOf(x)).filter(i=>i>=0);
+    if (at.length) found.push([Math.min(...at), f.properties]); }
+  return found.sort((a,b)=>a[0]-b[0]).map(x=>x[1]).slice(0,2);
+}
+function scheda(p){
+  const x = S.plan.items.find(i=>i.p.id===p.id), pos = S.plan.pos.get(p.id);
+  return {x, pos, testo: `${p.nome} ha ${fmt(p.over65)} anziani (${pc(p.quota_over65)}), ${dec(p.vedovi_1000)} vedovi ogni 1000 abitanti, il presidio sanitario ASL a ${fmt(p.dist_sanita)} m e ${pc(p.quota_stranieri)} di stranieri.`};
+}
+function rispondi(q){
+  const n = norm(q), it = S.plan.items, z = zoneCitate(q), src = new Set(); let a;
+  if (z.length===2){
+    const [A,B] = z.map(scheda);
+    a = `${A.testo} ${B.testo} Con le tue priorità ${z[0].nome} è ${A.pos?`al posto ${A.pos}`:'fuori dalle candidate'} e ${z[1].nome} ${B.pos?`al posto ${B.pos}`:'è fuori dalle candidate'}.` +
+        (A.x && !B.x ? ` ${z[1].nome} non entra perché il budget copre solo le prime ${S.plan.N}.` : B.x && !A.x ? ` ${z[0].nome} non entra perché il budget copre solo le prime ${S.plan.N}.` : '');
+    z.forEach(p=>src.add(p.nome)); ['Censimento Comune','Regione 2026','AperTO 2025'].forEach(s=>src.add(s));
+  } else if (z.length===1){
+    const A = scheda(z[0]);
+    a = A.testo + (A.x ? ` È nel piano al posto ${A.pos} con ${eur(A.x.euro)}, intervento “${A.x.x.intervento.toLowerCase()}”: ${motivo(A.x)}. Resta nel piano nel ${Math.round(A.x.sol*100)}% delle simulazioni.`
+      : A.pos ? ` Non è nel piano: con le tue priorità è al posto ${A.pos} su ${S.plan.cand.length} e il budget arriva alle prime ${S.plan.N}.` : ` Non è tra le zone candidate, perché l'hai esclusa dai filtri.`);
+    src.add(z[0].nome); src.add('Censimento Comune'); src.add('Regione 2026');
+  } else if (/solid|sicur|rischi|affidabil|fid/.test(n)){
+    const w = it.filter(x=>x.sol<.5);
+    a = it.map(x=>`${x.p.nome} ${Math.round(x.sol*100)}%`).join(', ') + '. ' + (w.length ? `${w.map(x=>x.p.nome).join(' e ')} ${w.length===1?'dipende':'dipendono'} molto dalle priorità: prova a cambiarne una e verifica se resta.` : 'Tutte le zone restano nel piano anche cambiando un po’ le priorità.');
+    src.add('400 simulazioni');
+  } else if (/soldi|budget|euro|cifr|ripart|divis|quant/.test(n)){
+    a = `Il budget di ${eur(S.budget)} è diviso in quote uguali tra le zone del piano; ognuna spende beneficiari per costo unitario: ` + it.map(x=>`${x.p.nome} ${eur(x.euro)}`).join(', ') + '.';
+    src.add('Piano generato');
+  } else if (/dati|fonte|anno|aggiorn/.test(n)){
+    a = 'Età per zona statistica 2013 e 2020, popolazione e stranieri per zona, stato civile e famiglie per circoscrizione 2025 e interventi di assistenza economica vengono da AperTO, Comune di Torino. Strutture ASL e farmacie vengono dalla Regione Piemonte, collocate sulla mappa con i numeri civici del Comune.';
+    src.add('AperTO'); src.add('Regione Piemonte');
+  } else if (/come|metod|calcol|indic|perche/.test(n)){
+    const t = it[0];
+    a = `Per ogni zona e intervento lo score combina bisogno, carenza del servizio, coerenza con la missione e fattibilità con il tuo budget. ${t ? `Al primo posto c’è ${t.p.nome}: ${motivo(t)}.` : ''}`;
+    src.add('Metodo'); if (t) src.add(t.p.nome);
+  } else a = 'Posso rispondere su una zona (scrivine il nome), su un confronto tra due zone, sulla solidità del piano, sulla divisione del budget, sul metodo o sui dati.';
+  return {a, src:[...src]};
+}
+async function chiediAI(q, t, d){
+  try { const r = await api('/api/ask', {domanda:q, org:S.plan.org, top:S.plan.N}); t.a = r.risposta; t.src = [...r.fonti, 'AI locale']; }
+  catch(e){ const r = rispondi(q); t.a = r.a; t.src = r.src; }
+  if (d && d.isConnected){ d.querySelector('.a').textContent = t.a; const s = d.querySelector('.src'); s.innerHTML = ''; t.src.forEach(x => { const sp = document.createElement('span'); sp.textContent = x; s.appendChild(sp); }); }
+}
+const THREAD = [];
+function renderChiedi(){
+  const el = $('chiediBody');
+  if (!S.plan){ el.innerHTML = vuoto('Prima genera il piano','Le risposte usano solo i dati del piano che hai generato.'); return; }
+  const it = S.plan.items, alt = S.plan.rank[S.plan.N] ? S.plan.rank[S.plan.N].properties.nome : null;
+  const sug = []; if (it[0]) sug.push(`Perché ${it[0].p.nome}?`); if (it[0] && alt) sug.push(`Perché ${it[0].p.nome} e non ${alt}?`);
+  sug.push('Quanto è solido il piano?', 'Come avete diviso il budget?', 'Da dove vengono i dati?');
+  el.innerHTML = `<div class="rise"><div class="planhead" style="--i:0"><div><h1>Chiedi al piano</h1><p>Ogni risposta usa solo i dati delle zone e le scelte del piano, e mostra da dove viene.</p></div></div>
+    <div class="sugg" style="--i:1">${sug.map(s=>`<button>${s}</button>`).join('')}</div></div>
+    <div class="thread" id="thread"></div>
+    <form class="askbar" id="askbar"><input id="q" autocomplete="off" placeholder="Es. perché Lucento e non Pozzo Strada?" aria-label="Domanda"><button aria-label="Chiedi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></form>`;
+  el.querySelectorAll('.sugg button').forEach(b=>b.onclick=()=>chiedi(b.textContent));
+  $('askbar').onsubmit = e => { e.preventDefault(); chiedi($('q').value); $('q').value=''; };
+  THREAD.forEach(t=>aggiungi(t,false));
+}
+function aggiungi(t, scroll){
+  const d = document.createElement('div'); d.className='qa';
+  d.innerHTML = `<div class="q"></div><div class="a"></div><div class="src"></div>`;
+  d.querySelector('.q').textContent = t.q; d.querySelector('.a').textContent = t.a;
+  t.src.forEach(s=>{ const sp=document.createElement('span'); sp.textContent=s; d.querySelector('.src').appendChild(sp); });
+  $('thread').appendChild(d); if (scroll) d.scrollIntoView({behavior:'smooth', block:'center'});
+  return d;
+}
+function chiedi(q){ if (!q || !q.trim() || !S.plan) return; const t={q, a:'L\'AI sta cercando la risposta nei dati del piano…', src:[]}; THREAD.push(t); chiediAI(q, t, $('thread') ? aggiungi(t,true) : null); }
+
+/* ========== metodo ========== */
+$('infoBtn').onclick = () => $('sheet').classList.add('on');
+$('sheetClose').onclick = () => $('sheet').classList.remove('on');
+$('sheet').onclick = e => { if (e.target.id==='sheet') $('sheet').classList.remove('on'); };
+addEventListener('keydown', e => { if (e.key==='Escape'){ $('sheet').classList.remove('on'); chiudiZona(); } });
+
+/* ========== avvio ========== */
+syncNeeds(); press($("quick"), S.budget); changed(); show(route());
+</script>
+</body>
+</html>
